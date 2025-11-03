@@ -1,0 +1,37 @@
+.upgrades-page {
+  min-height: 100vh;
+  background: linear-gradient(180deg, #0f1624 0%, #1a1a2e 100%);
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  display: flex;
+  flex-direction: column;
+}
+
+.upgrades-page__content {
+  flex: 1;
+  padding: 25px 16px;
+  overflow-y: auto;
+}
+
+.upgrades-page__title {
+    color: rgba(255, 255, 255, 1);
+    font-family: Inter;
+    font-size: 24px;
+    font-weight: 700;
+    line-height: 120%;
+    letter-spacing: -1.1%;
+    text-align: center;
+    margin: 0 0 20px 0;
+}
+
+.upgrades-page__grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 24px;
+  margin-bottom: 24px;
+}
+
+.upgrades-page__special {
+  width: 100%;
+}

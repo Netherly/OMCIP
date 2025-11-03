@@ -1,0 +1,120 @@
+import React, { createContext, useEffect, useContext, useState } from "react";
+
+export const TelegramContext = createContext();
+
+export const useTelegram = () => {
+  const context = useContext(TelegramContext);
+  if (!context) {
+    throw new Error("useTelegram must be used within TelegramProvider");
+  }
+  return context;
+};
+
+export const TelegramProvider = ({ children }) => {
+  const [webApp, setWebApp] = useState(null);
+  const [user, setUser] = useState(null);
+
+  useEffect(() => {
+    if (window.Telegram?.WebApp) {
+      const tg = window.Telegram.WebApp;
+      tg.ready();
+      tg.expand(); // на весь экран
+      
+      setWebApp(tg);
+      
+      // Получаем данные пользователя
+      if (tg.initDataUnsafe?.user) {
+        setUser(tg.initDataUnsafe.user);
+      }
+      
+      // Настройка темы (опционально)
+      if (tg.themeParams) {
+        document.documentElement.style.setProperty(
+          '--tg-theme-bg-color',
+          tg.themeParams.bg_color || '#0f1624'
+        );
+      }
+    }
+  }, []);
+
+  // Вибрация при клике
+  const hapticFeedback = (style = "light") => {
+    try {
+      if (window.Telegram?.WebApp?.HapticFeedback) {
+        const styles = {
+          light: "impact",
+          medium: "impact",
+          heavy: "impact",
+          success: "notification",
+          warning: "notification",
+          error: "notification",
+        };
+        
+        const type = styles[style] || "impact";
+        
+        if (type === "impact") {
+          window.Telegram.WebApp.HapticFeedback.impactOccurred(style);
+        } else {
+          window.Telegram.WebApp.HapticFeedback.notificationOccurred(style);
+        }
+      }
+    } catch (e) {
+      console.warn("Haptic feedback not available", e);
+    }
+  };
+
+  // Показать кнопку "Назад"
+  const showBackButton = (callback) => {
+    if (webApp?.BackButton) {
+      webApp.BackButton.show();
+      webApp.BackButton.onClick(callback);
+    }
+  };
+
+  // Скрыть кнопку "Назад"
+  const hideBackButton = () => {
+    if (webApp?.BackButton) {
+      webApp.BackButton.hide();
+    }
+  };
+
+  // Показать главную кнопку
+  const showMainButton = (text, callback) => {
+    if (webApp?.MainButton) {
+      webApp.MainButton.setText(text);
+      webApp.MainButton.show();
+      webApp.MainButton.onClick(callback);
+    }
+  };
+
+  // Скрыть главную кнопку
+  const hideMainButton = () => {
+    if (webApp?.MainButton) {
+      webApp.MainButton.hide();
+    }
+  };
+
+  // Закрыть приложение
+  const close = () => {
+    if (webApp) {
+      webApp.close();
+    }
+  };
+
+  const value = {
+    webApp,
+    user,
+    hapticFeedback,
+    showBackButton,
+    hideBackButton,
+    showMainButton,
+    hideMainButton,
+    close,
+  };
+
+  return (
+    <TelegramContext.Provider value={value}>
+      {children}
+    </TelegramContext.Provider>
+  );
+};

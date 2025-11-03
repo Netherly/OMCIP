@@ -1,0 +1,55 @@
+.tasks-page {
+    min-height: 100vh;
+    max-height: 100vh;
+    background: linear-gradient(180deg, #0f1624 0%, #1a1a2e 100%);
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+.tasks-page__content {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding-bottom: 90px;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+.tasks-page__content::-webkit-scrollbar {
+    display: none;
+}
+.tasks-page__tabs {
+    display: flex;
+    margin: 30px 16px 20px 16px;
+    padding: 2px;
+    border-radius: 8px;
+    background: rgba(44, 44, 44, 0.8);
+}
+.tasks-page__tab {
+    flex: 1;
+    padding: 12px 20px;
+    background: transparent;
+    border: none;
+    border-radius: 12px;
+    color: rgba(255, 255, 255, 0.6);
+    font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+.tasks-page__tab--active {
+    box-sizing: border-box;
+    border: 1px solid rgba(56, 223, 239, 1);
+    border-radius: 8px;
+    background: rgba(44, 44, 44, 0.8);
+    color: #fff;
+}
+.tasks-page__list {
+    padding: 0 16px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
