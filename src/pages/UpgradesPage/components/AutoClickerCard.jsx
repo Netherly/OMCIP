@@ -2,16 +2,23 @@ import React from "react";
 import "./UpgradeCard.css";
 import { formatNumber } from "../../../utils/formatters";
 import ToothCoinImg from "../../../assets/images/upgrades/tooth.svg";
+import assistantImg from "../../../assets/images/upgrades/assistant.svg";
 
-const UpgradeCard = ({ upgrade, isPurchased, canAfford, onPurchase, isSpecial = false, isLocked = false }) => {
+const AutoClickerCard = ({ 
+  config, 
+  isPurchased, 
+  canAfford, 
+  onPurchase,
+  isSpecial = false,
+  isLocked = false
+}) => {
   return (
     <div className={`upgrade-card ${isSpecial ? "upgrade-card--special" : ""} ${isLocked ? "upgrade-card--locked" : ""}`}>
       {/* Верхний ярус */}
       <div className="upgrade-card__top">
         <div className="upgrade-card__image-wrapper">
           <img 
-            src={upgrade.image} 
-            alt={upgrade.name}
+            src={assistantImg} 
             className="upgrade-card__image"
             onError={(e) => {
               e.target.style.display = 'none';
@@ -21,27 +28,12 @@ const UpgradeCard = ({ upgrade, isPurchased, canAfford, onPurchase, isSpecial = 
         </div>
 
         <div className="upgrade-card__info">
-          <span className="upgrade-card__name">{upgrade.name}</span>
+          <span className="upgrade-card__name">{config.name}</span>
           <div className="upgrade-card__value">
-            <span className="upgrade-card__label">1 тап:</span>
-            <span className="upgrade-card__coins">{upgrade.perTap} зубкоина</span>
+            <span className="upgrade-card__label">в час:</span>
+            <span className="upgrade-card__coins">{formatNumber(config.coinsPerHour)} зубкоинов</span>
           </div>
         </div>
-
-        {isSpecial && upgrade.bonus && (
-            <div className="upgrade-card__bonus">
-                <div className="upgrade-card__bonus-icon">
-                    <img 
-                        src={upgrade.bonusIcon} 
-                        alt="Bonus"
-                        onError={(e) => {
-                            e.target.outerHTML = '<span style="font-size: 20px;">✓</span>';
-                        }}
-                    />
-                </div>
-                <span className="upgrade-card__bonus-text">{upgrade.bonus}</span>
-            </div>
-        )}
       </div>
 
       <button 
@@ -69,7 +61,7 @@ const UpgradeCard = ({ upgrade, isPurchased, canAfford, onPurchase, isSpecial = 
               className="upgrade-card__button-icon"
             />
             <span className="upgrade-card__button-text">
-              {formatNumber(upgrade.cost)}
+              {formatNumber(config.cost)}
             </span>
           </>
         )}
@@ -78,4 +70,4 @@ const UpgradeCard = ({ upgrade, isPurchased, canAfford, onPurchase, isSpecial = 
   );
 };
 
-export default UpgradeCard;
+export default AutoClickerCard;

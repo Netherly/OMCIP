@@ -48,12 +48,12 @@
   height: calc(100% - 6px);
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  justify-content: flex-end; /* ИСПРАВЛЕНО: было center, теперь flex-end */
 }
 
 /* Заполнение энергии */
 .energy-bar__fill {
-  
+  position: relative; /* Добавлено для корректного позиционирования дочерних элементов */
   width: 100%;
   background: linear-gradient(180deg, #F5B922 0%, #B66400 100%);
   border-radius: 77px;

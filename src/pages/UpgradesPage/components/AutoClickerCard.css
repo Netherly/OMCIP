@@ -1,3 +1,4 @@
+/* Используем те же стили что и для UpgradeCard
 .upgrade-card {
     background: rgba(44, 44, 44, 0.8);
     border-radius: clamp(12px, 3vw, 16px);
@@ -9,6 +10,10 @@
     transition: all 0.3s ease;
 }
 
+.upgrade-card--locked {
+    opacity: 0.6;
+    background: rgba(44, 44, 44, 0.5);
+}
 
 .upgrade-card--special {
     grid-column: 1 / -1;
@@ -95,43 +100,6 @@
     text-align: left;
 }
 
-/* Бонус для специальной карточки */
-.upgrade-card__bonus {
-    display: flex;
-    flex-direction: column;
-    align-items: left;
-    gap: clamp(3px, 1vw, 4px);
-    padding-left: clamp(6px, 2vw, 8px);
-    margin-top: clamp(10px, 2.5vw, 21px);
-}
-
-.upgrade-card__bonus-icon {
-    width: clamp(20px, 5vw, 24px);
-    height: clamp(20px, 5vw, 24px);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 50%;
-}
-
-.upgrade-card__bonus-icon img {
-    width: 20px;
-    height: 20px;
-}
-
-.upgrade-card__bonus-text {
-    color: rgba(255, 255, 255, 0.85);
-    font-family: Inter;
-    font-size: clamp(12px, 3vw, 14px);
-    font-weight: 500;
-    line-height: 120%;
-    letter-spacing: -1.1%;
-    text-align: left;
-    max-width: 150px;
-    word-wrap: break-word;
-}
-
-/* Кнопка покупки */
 .upgrade-card__button {
     height: clamp(38px, 9vw, 41px);
     display: flex;
@@ -182,7 +150,6 @@
     line-height: 120%;
 }
 
-/* Адаптивность */
 @media (max-width: 360px) {
     .upgrade-card {
         padding: 8px;
@@ -192,9 +159,4 @@
     .upgrade-card__info {
         margin-right: 0;
     }
-
-    .upgrade-card__bonus-text {
-        font-size: 11px;
-        max-width: 120px;
-    }
-}
+} */
