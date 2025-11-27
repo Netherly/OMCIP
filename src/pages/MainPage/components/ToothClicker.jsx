@@ -1,14 +1,16 @@
-import React, { useState, useRef, useCallback } from "react";
+import React, { useState, useRef, useCallback, useEffect } from "react";
 import "./ToothClicker.css";
 import { useGame } from "../../../context/GameContext";
 import { useTelegram } from "../../../context/TelegramContext";
 import { formatNumber } from "../../../utils/formatters";
+import * as API from "../../../utils/api";
 
 const ToothClicker = () => {
-  const { handleClick, coinsPerClick, energy, toothImage } = useGame();
+  const { handleClick, baseCoinsPerClick, energy, toothImage } = useGame();
   const { hapticFeedback } = useTelegram();
   const [clicks, setClicks] = useState([]);
   const [isPressed, setIsPressed] = useState(false);
+  const [syncError, setSyncError] = useState(null);
   
   // Защита от автокликера
   const tapTimestamps = useRef([]);
@@ -39,7 +41,7 @@ const ToothClicker = () => {
     }
 
     const clickId = Date.now() + Math.random();
-    setClicks(prev => [...prev, { id: clickId, x, y, coins: coinsPerClick }]);
+    setClicks(prev => [...prev, { id: clickId, x, y, coins: baseCoinsPerClick }]);
 
     setTimeout(() => {
       setClicks(prev => prev.filter(click => click.id !== clickId));
@@ -47,7 +49,15 @@ const ToothClicker = () => {
 
     hapticFeedback?.("light");
     handleClick();
-  }, [energy, coinsPerClick, canTap, hapticFeedback, handleClick]);
+
+    // Отправляем клик на сервер (асинхронно, не блокируя UI)
+    API.sendClick()
+      .catch(err => {
+        console.error("Failed to sync click with server:", err);
+        setSyncError("Ошибка синхронизации клика");
+        setTimeout(() => setSyncError(null), 3000);
+      });
+  }, [energy, baseCoinsPerClick, canTap, hapticFeedback, handleClick]);
 
   // Обработка touch событий (мультитач)
   const onTouchStart = useCallback((e) => {

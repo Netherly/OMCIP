@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, useLocation } from "react-router-dom";
 import LoadingPage from "./pages/LoadingPage/LoadingPage.jsx";
 import MainPage from "./pages/MainPage/MainPage.jsx";
 import UpgradesPage from "./pages/UpgradesPage/UpgradesPage.jsx";
@@ -10,6 +10,8 @@ import CharacterPage from "./pages/CharacterPage/CharacterPage.jsx"
 
 function App() {
   const [isLoaded, setIsLoaded] = useState(false);
+
+  console.log(window.Telegram.WebApp);
 
   if (!isLoaded) {
     return <LoadingPage onLoaded={() => setIsLoaded(true)} />;

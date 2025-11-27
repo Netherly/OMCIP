@@ -1,4 +1,5 @@
 import React, { createContext, useEffect, useContext, useState } from "react";
+import * as API from "../utils/api";
 
 export const TelegramContext = createContext();
 
@@ -13,29 +14,71 @@ export const useTelegram = () => {
 export const TelegramProvider = ({ children }) => {
   const [webApp, setWebApp] = useState(null);
   const [user, setUser] = useState(null);
+  const [authError, setAuthError] = useState(null);
+  const [isAuthenticating, setIsAuthenticating] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   useEffect(() => {
+    console.log('[TelegramContext] Initializing...');
+    
     if (window.Telegram?.WebApp) {
       const tg = window.Telegram.WebApp;
       tg.ready();
-      tg.expand(); // на весь экран
+      tg.expand();
       
       setWebApp(tg);
       
-      // Получаем данные пользователя
-      if (tg.initDataUnsafe?.user) {
-        setUser(tg.initDataUnsafe.user);
+      const telegramUser = tg.initDataUnsafe?.user;
+      
+      console.log('[TelegramContext] Telegram WebApp initialized:', {
+        initData: tg.initData ? tg.initData.substring(0, 50) + '...' : 'empty',
+        user: telegramUser,
+      });
+      
+      if (telegramUser && tg.initData) {
+        setUser(telegramUser);
+        // Отправляем только initData на сервер
+        authenticateUser(tg.initData);
+      } else {
+        console.warn('[TelegramContext] No user or initData found!');
+        setIsAuthenticated(true);
       }
       
-      // Настройка темы (опционально)
       if (tg.themeParams) {
         document.documentElement.style.setProperty(
           '--tg-theme-bg-color',
           tg.themeParams.bg_color || '#0f1624'
         );
       }
+    } else {
+      console.warn('[TelegramContext] window.Telegram.WebApp not available!');
+      setIsAuthenticated(true);
     }
   }, []);
+
+  // Аутентификация пользователя на сервере
+  const authenticateUser = async (initData) => {
+    if (!initData) {
+      console.warn('[TelegramContext] No initData provided');
+      setIsAuthenticated(true);
+      return;
+    }
+
+    setIsAuthenticating(true);
+    setAuthError(null);
+
+    try {
+      const response = await API.authenticateTelegram(initData);
+      console.log('[TelegramContext] Auth response:', response);
+      setIsAuthenticated(true);
+    } catch (error) {
+      console.error('[TelegramContext] Auth error:', error.message);
+      setAuthError(error.message || "Failed to authenticate");
+      setIsAuthenticated(true);
+    } finally {
+      setIsAuthenticating(false);
+    }
+  };
 
   // Вибрация при клике
   const hapticFeedback = (style = "light") => {
@@ -104,6 +147,9 @@ export const TelegramProvider = ({ children }) => {
   const value = {
     webApp,
     user,
+    authError,
+    isAuthenticating,
+    isAuthenticated,
     hapticFeedback,
     showBackButton,
     hideBackButton,

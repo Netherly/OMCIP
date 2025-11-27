@@ -1,9 +1,10 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import "./UpgradesPage.css";
 import Footer from "../../components/Footer/Footer";
 import UpgradeCard from "./components/UpgradeCard";
 import AutoClickerCard from "./components/AutoClickerCard";
 import { useGame } from "../../context/GameContext";
+import * as API from "../../utils/api";
 import zondImg from "../../assets/images/upgrades/zond.svg";
 import mirrorImg from "../../assets/images/upgrades/mirror.svg";
 import gladilkaImg from "../../assets/images/upgrades/gladilka.svg";
@@ -16,6 +17,9 @@ import Char3 from "../../assets/images/char3.svg";
 
 const UpgradesPage = () => {
   const [activeTab, setActiveTab] = useState("clicker");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  
   const { 
     coins, 
     purchaseUpgrade, 
@@ -31,36 +35,27 @@ const UpgradesPage = () => {
     purchaseCharacter3,
     unlockedCharacters,
     purchasedCharacter3,
+    // Новые свойства из GameContext
+    upgrades,
+    userUpgrades,
+    loadingUpgrades,
   } = useGame();
 
-  const upgrades = [
-    { id: 1, name: "Зонд", image: zondImg, perTap: 2, cost: 72000, clickIncrease: 2 },
-    { id: 2, name: "Зеркало", image: mirrorImg, perTap: 3, cost: 144000, clickIncrease: 3 },
-    { id: 3, name: "Гладилка", image: gladilkaImg, perTap: 4, cost: 288000, clickIncrease: 4 },
-    { id: 4, name: "Шприц", image: shpricImg, perTap: 5, cost: 432000, clickIncrease: 5 },
-    { id: 5, name: "Набор", image: naborImg, perTap: 10, cost: 864000, clickIncrease: 10 },
-    { id: 6, name: "Лоток", image: lotokImg, perTap: 20, cost: 1568000, clickIncrease: 20 },
-  ];
+  // Загружаем апгрейды с сервера при открытии страницы
+  useEffect(() => {
+    // Данные уже загружаются в GameContext при инициализации
+    // Здесь ничего дополнительного не нужно
+  }, []);
 
-  const specialUpgrade = {
-    id: 7,
-    name: "Ассистент",
-    image: assistantImg,
-    perTap: 25,
-    cost: 2216000,
-    clickIncrease: 25,
-    bonus: "Увеличивает автокликер в 1,5 раза",
-    bonusIcon: checkImg,
-  };
-  const character3Config = {
-    id: 3,
-    name: "Персонаж 3",
-    cost: 1000000,
-    image: Char3,
-  };
+  // Загрузка данных происходит в GameContext, здесь используем только то что там загружено
 
-  const handlePurchase = (upgrade) => {
-    purchaseUpgrade(upgrade.id, upgrade.cost, upgrade.clickIncrease);
+  const handlePurchase = async (upgrade) => {
+    try {
+      await purchaseUpgrade(upgrade.id);
+    } catch (err) {
+      console.error("Failed to purchase upgrade:", err);
+      setError(err.message);
+    }
   };
 
   const handleAutoClickerPurchase = (config) => {
@@ -72,6 +67,43 @@ const UpgradesPage = () => {
   const handleCharacter3Purchase = () => {
     purchaseCharacter3(1000000);
   };
+
+  // Адаптируем данные апгрейдов из API к формату компонента
+  const adaptUpgradeData = (upgrade) => {
+    // Получаем количество раз, которое это улучшение уже куплено (0 или 1)
+    const purchaseCount = Array.isArray(userUpgrades) 
+      ? userUpgrades.filter(u => u.upgrade_id === upgrade.id).length 
+      : 0;
+    
+    // Вычисляем текущую цену: base_cost * (cost_multiplier ^ purchaseCount)
+    // Если уже куплено, цена для следующей покупки (но это не допускается)
+    const baseCost = parseFloat(upgrade.base_cost) || 0;
+    const costMultiplier = parseFloat(upgrade.cost_multiplier) || 1;
+    const currentCost = Math.floor(baseCost * Math.pow(costMultiplier, purchaseCount));
+    
+    const adapted = {
+      id: upgrade.id,
+      name: upgrade.name || upgrade.title || 'Unknown',
+      image: upgrade.image || upgrade.icon || '',
+      cost: currentCost,
+      perTap: upgrade.base_value || upgrade.perTap || upgrade.coins_per_click || 0,
+      bonus: upgrade.bonus || null,
+      bonusIcon: upgrade.bonusIcon || null,
+      ...upgrade // Сохраняем все остальные свойства на случай если они нужны
+    };
+    if (upgrades.length > 0 && upgrades[0] === upgrade) {
+      console.log('[UpgradesPage] First upgrade data:', upgrade);
+      console.log('[UpgradesPage] Purchase count:', purchaseCount);
+      console.log('[UpgradesPage] Current cost:', currentCost);
+      console.log('[UpgradesPage] First upgrade adapted:', adapted);
+    }
+    return adapted;
+  };
+
+  // Адаптируем список апгрейдов
+  const adaptedUpgrades = upgrades.map(adaptUpgradeData);
+  const specialUpgrade = adaptedUpgrades.length > 0 ? adaptedUpgrades[adaptedUpgrades.length - 1] : null;
+  const regularUpgrades = adaptedUpgrades.slice(0, -1);
 
   return (
     <div
@@ -105,9 +137,10 @@ const UpgradesPage = () => {
         {activeTab === "clicker" ? (
           <>
             <div className="upgrades-page__grid">
-              {upgrades.map((upgrade) => {
-                const isPurchased = purchasedUpgrades.has(upgrade.id);
-                const canPurchase = canPurchaseUpgrade(upgrade.id);
+              {regularUpgrades.map((upgrade) => {
+                // Проверяем куплено ли это улучшение по upgrade_id
+                const isPurchased = Array.isArray(userUpgrades) && userUpgrades.some(u => u.upgrade_id === upgrade.id);
+                const canPurchase = !isPurchased; // Можно купить только если не куплено
                 const canAfford = coins >= upgrade.cost;
                 
                 return (
@@ -126,8 +159,10 @@ const UpgradesPage = () => {
 
             <div className="upgrades-page__special">
               {(() => {
-                const isPurchased = purchasedUpgrades.has(specialUpgrade.id);
-                const canPurchase = canPurchaseUpgrade(specialUpgrade.id);
+                if (!specialUpgrade) return null;
+                // Проверяем куплено ли это улучшение по upgrade_id
+                const isPurchased = Array.isArray(userUpgrades) && userUpgrades.some(u => u.upgrade_id === specialUpgrade.id);
+                const canPurchase = !isPurchased; // Можно купить только если не куплено
                 const canAfford = coins >= specialUpgrade.cost;
                 
                 return (

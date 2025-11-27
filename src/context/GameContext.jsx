@@ -1,4 +1,4 @@
-import React, { createContext, useState, useEffect, useContext } from "react";
+import React, { createContext, useState, useEffect, useContext, useRef } from "react";
 import Background1 from "../assets/images/background_lvl1.png"
 import Background2 from "../assets/images/background_lvl2.png"
 import Background3 from "../assets/images/background_lvl3.png"
@@ -8,6 +8,7 @@ import Tooth3 from "../assets/images/tooth3.png"
 import Char1 from "../assets/images/char2.webm"
 import Char2 from "../assets/images/char3.webm"
 import Char3 from "../assets/images/char1.webm"
+import * as API from "../utils/api";
 
 export const GameContext = createContext();
 
@@ -19,133 +20,62 @@ export const useGame = () => {
   return context;
 };
 
-// Ключи для localStorage
-const LAST_ONLINE_KEY = "dental_clicker_last_online";
-const AUTOCLICKER_LEVEL_KEY = "dental_clicker_autoclicker_level";
-const OFFLINE_COINS_KEY = "dental_clicker_offline_coins";
-const PURCHASED_UPGRADES_KEY = "dental_clicker_purchased_upgrades";
-const PURCHASED_AUTOCLICKERS_KEY = "dental_clicker_purchased_autoclickers";
-const DAILY_TASKS_KEY = "dental_clicker_daily_tasks";
-const WEEKLY_TASKS_KEY = "dental_clicker_weekly_tasks";
-const LOGIN_REWARDS_KEY = "dental_clicker_login_rewards";
-const LOGIN_STREAK_KEY = "dental_clicker_login_streak";
-const LAST_LOGIN_DATE_KEY = "dental_clicker_last_login_date";
-const ACTIVE_BONUS_KEY = "dental_clicker_active_bonus";
-const INVITED_FRIENDS_KEY = "dental_clicker_invited_friends";
-const UNLOCKED_BACKGROUNDS_KEY = "dental_clicker_unlocked_backgrounds";
-const UNLOCKED_TEETH_KEY = "dental_clicker_unlocked_teeth";
-const UNLOCKED_CHARACTERS_KEY = "dental_clicker_unlocked_characters";
-const PURCHASED_CHARACTER3_KEY = "dental_clicker_purchased_character3";
-
 export const GameProvider = ({ children }) => {
-  // Основные игровые параметры
-  const [coins, setCoins] = useState(1111111110);
+  // ========== ОСНОВНЫЕ ИГРОВЫЕ ПАРАМЕТРЫ ==========
+  // Инициализируем дефолтными значениями, сервер переинициализирует через loadGameState()
+  
+  const [coins, setCoins] = useState(0);
   const [level, setLevel] = useState(1);
-  const [energy, setEnergy] = useState(10000);
-  const [maxEnergy] = useState(10000);
+  const [energy, setEnergy] = useState(0);
+  const [maxEnergy, setMaxEnergy] = useState(10000);
   const [baseCoinsPerClick, setBaseCoinsPerClick] = useState(1);
   const [coinsPerClick, setCoinsPerClick] = useState(1);
   
-  // Активный бонус
-  const [activeBonus, setActiveBonus] = useState(() => {
-    const saved = localStorage.getItem(ACTIVE_BONUS_KEY);
-    if (saved) {
-      const bonus = JSON.parse(saved);
-      // Проверяем, не истек ли бонус
-      if (bonus.expiresAt && bonus.expiresAt > Date.now()) {
-        return bonus;
-      }
-    }
-    return null;
-  });
-
-  const [invitedFriendsCount, setInvitedFriendsCount] = useState(() => {
-    const saved = localStorage.getItem(INVITED_FRIENDS_KEY);
-    return saved ? parseInt(saved, 10) : 0;
-  });
-
-  const [unlockedBackgrounds, setUnlockedBackgrounds] = useState(() => {
-    const saved = localStorage.getItem(UNLOCKED_BACKGROUNDS_KEY);
-    return saved ? new Set(JSON.parse(saved)) : new Set([1]);
-  });
-
-  const [unlockedTeeth, setUnlockedTeeth] = useState(() => {
-    const saved = localStorage.getItem(UNLOCKED_TEETH_KEY);
-    return saved ? new Set(JSON.parse(saved)) : new Set([1]);
-  });
-
-  const [unlockedCharacters, setUnlockedCharacters] = useState(() => {
-    const saved = localStorage.getItem(UNLOCKED_CHARACTERS_KEY);
-    return saved ? new Set(JSON.parse(saved)) : new Set([1]);
-  });
-
-  const [purchasedCharacter3, setPurchasedCharacter3] = useState(() => {
-    const saved = localStorage.getItem(PURCHASED_CHARACTER3_KEY);
-    return saved === "true";
-  });
-  
-  // Автокликер
-  const [autoClickerLevel, setAutoClickerLevel] = useState(() => {
-    const saved = localStorage.getItem(AUTOCLICKER_LEVEL_KEY);
-    return saved ? parseInt(saved, 10) : 0;
-  });
-  const [coinsPerHour, setCoinsPerHour] = useState(0);
-  const [offlineEarnings, setOfflineEarnings] = useState(0);
-  
-  // Опыт и прогресс
+  // Опыт и прогресс (отправляется сервером)
   const [expCurrent, setExpCurrent] = useState(0);
   const [expRequired, setExpRequired] = useState(100);
   
-  // Статистика для заданий
-  const [totalTaps, setTotalTaps] = useState(0);
-  const [maxCoinsReached, setMaxCoinsReached] = useState(0);
-  const [upgradesPurchased, setUpgradesPurchased] = useState(0);
+  // Активный бонус от сервера
+  const [activeBonus, setActiveBonus] = useState(null);
   
-  // Купленные апгрейды
-  const [purchasedUpgrades, setPurchasedUpgrades] = useState(() => {
-    const saved = localStorage.getItem(PURCHASED_UPGRADES_KEY);
-    return saved ? new Set(JSON.parse(saved)) : new Set();
-  });
-  
-  const [purchasedAutoClickerLevels, setPurchasedAutoClickerLevels] = useState(() => {
-    const saved = localStorage.getItem(PURCHASED_AUTOCLICKERS_KEY);
-    return saved ? new Set(JSON.parse(saved)) : new Set();
-  });
-  
-  // Визуальные элементы
+  // Визуальные элементы (отправляются сервером при разблокировке)
   const [toothImage, setToothImage] = useState(Tooth1);
   const [background, setBackground] = useState(Background1);
   const [character, setCharacter] = useState(Char1);
   
-  // Профиль пользователя
+  // Профиль пользователя (загружается из Telegram WebApp)
   const [userProfile, setUserProfile] = useState({
     name: "Игрок",
     photo: "/assets/images/profile-placeholder.png"
   });
 
-  useEffect(() => {
-    localStorage.setItem(INVITED_FRIENDS_KEY, invitedFriendsCount.toString());
-  }, [invitedFriendsCount]);
+  // ========== УЛУЧШЕНИЯ И СЕРВИСЫ ==========
+  // Загружаются с сервера
+  
+  const [upgrades, setUpgrades] = useState([]);
+  const [services, setServices] = useState([]);
+  const [userUpgrades, setUserUpgrades] = useState([]);
+  const [userServices, setUserServices] = useState([]); // Покупленные услуги
+  const [loadingUpgrades, setLoadingUpgrades] = useState(false);
+  const [loadingServices, setLoadingServices] = useState(false);
+  
+  // ========== ЗАДАЧИ ==========
+  // Загружаются с сервера
+  
+  const [dailyTasks, setDailyTasks] = useState([]);
+  const [weeklyTasks, setWeeklyTasks] = useState([]);
+  const [loginRewards, setLoginRewards] = useState([]);
+  const [loadingTasks, setLoadingTasks] = useState(false);
 
-  useEffect(() => {
-    localStorage.setItem(UNLOCKED_BACKGROUNDS_KEY, JSON.stringify([...unlockedBackgrounds]));
-  }, [unlockedBackgrounds]);
-
-  useEffect(() => {
-    localStorage.setItem(UNLOCKED_TEETH_KEY, JSON.stringify([...unlockedTeeth]));
-  }, [unlockedTeeth]);
-
-  useEffect(() => {
-    localStorage.setItem(UNLOCKED_CHARACTERS_KEY, JSON.stringify([...unlockedCharacters]));
-  }, [unlockedCharacters]);
-
-  useEffect(() => {
-    localStorage.setItem(PURCHASED_CHARACTER3_KEY, purchasedCharacter3.toString());
-  }, [purchasedCharacter3]);
+  // ========== БАТЧИНГ КЛИКОВ ==========
+  // Накопление кликов для отправки батчем на сервер каждые 150ms
+  
+  const clickBatchRef = useRef({ clicks: 0, timestamps: [] });
+  const clickBatchTimeoutRef = useRef(null);
 
   // ========== СИСТЕМА БОНУСОВ ==========
   
-  // Активация бонуса к тапам
+  // Активация бонуса к тапам (множитель к coins_per_click)
   const activateTapBonus = (multiplier, durationMinutes) => {
     const expiresAt = Date.now() + (durationMinutes * 60 * 1000);
     const bonus = {
@@ -156,9 +86,7 @@ export const GameProvider = ({ children }) => {
     };
     
     setActiveBonus(bonus);
-    localStorage.setItem(ACTIVE_BONUS_KEY, JSON.stringify(bonus));
-    
-    // Пересчитываем coinsPerClick
+    // Пересчитываем coinsPerClick сразу
     setCoinsPerClick(baseCoinsPerClick * multiplier);
     
     return bonus;
@@ -171,7 +99,6 @@ export const GameProvider = ({ children }) => {
         if (Date.now() >= activeBonus.expiresAt) {
           // Бонус истек
           setActiveBonus(null);
-          localStorage.removeItem(ACTIVE_BONUS_KEY);
           setCoinsPerClick(baseCoinsPerClick);
         }
       };
@@ -186,7 +113,7 @@ export const GameProvider = ({ children }) => {
     }
   }, [activeBonus, baseCoinsPerClick]);
   
-  // Обновление coinsPerClick при изменении базового значения
+  // Пересчитываем coinsPerClick при изменении бонуса или базового значения
   useEffect(() => {
     if (activeBonus && activeBonus.type === 'tap_multiplier') {
       setCoinsPerClick(baseCoinsPerClick * activeBonus.multiplier);
@@ -195,333 +122,8 @@ export const GameProvider = ({ children }) => {
     }
   }, [baseCoinsPerClick, activeBonus]);
 
-  // ========== СИСТЕМА ДРУЗЕЙ И РАЗБЛОКИРОВОК ==========
-
-  const inviteFriend = () => {
-    const newCount = invitedFriendsCount + 1;
-    setInvitedFriendsCount(newCount);
-    
-    // Проверяем разблокировки при приглашении друзей
-    if (newCount >= 1 && !unlockedCharacters.has(2)) {
-      setUnlockedCharacters(prev => new Set([...prev, 2]));
-    }
-    if (newCount >= 3 && !unlockedTeeth.has(3)) {
-      setUnlockedTeeth(prev => new Set([...prev, 3]));
-    }
-    if (newCount >= 7 && !unlockedCharacters.has(3)) {
-      setUnlockedCharacters(prev => new Set([...prev, 3]));
-      setPurchasedCharacter3(true);
-    }
-  };
+  // ========== ВОССТАНОВЛЕНИЕ ЭНЕРГИИ ==========
   
-  // ========== ЗАДАНИЯ И НАГРАДЫ ==========
-  
-  // Начальные задания
-  const initialDailyTasks = [
-    { id: 1, title: "Сделай 100 тапов", reward: 1000, completed: false, claimed: false, type: "daily" },
-    { id: 2, title: "Накопи 5000 зубкоинов", reward: 2000, completed: false, claimed: false, type: "daily" },
-    { id: 3, title: "Купи любой апгрейд", reward: 1500, completed: false, claimed: false, type: "daily" },
-  ];
-
-  const initialWeeklyTasks = [
-    { id: 4, title: "Сыграй 7 дней без пропусков", reward: 70000, completed: false, claimed: false, type: "weekly", progress: 0, maxProgress: 7 },
-    { id: 5, title: "Собери 100000 зубкоинов за неделю", reward: 50000, completed: false, claimed: false, type: "weekly", progress: 0, maxProgress: 7 },
-  ];
-
-  const loginRewardsConfig = [
-    { day: 1, title: "1.000 зубкоинов", description: "Награда за первый день", type: "coins", value: 1000, claimed: false },
-    { day: 2, title: "Бонус ×2 к тапам", description: "Действует 30 минут", type: "bonus", value: { multiplier: 2, duration: 30 }, claimed: false },
-    { day: 3, title: "Сундук", description: "1.000–10.000 зубкоинов или бонус ×2 на 1 час", type: "chest", value: "small", claimed: false },
-    { day: 4, title: "10.000 зубкоинов", description: "Награда за 4 дня подряд", type: "coins", value: 10000, claimed: false },
-    { day: 5, title: "Бонус ×2 к тапам", description: "Действует 1 час", type: "bonus", value: { multiplier: 2, duration: 60 }, claimed: false },
-    { day: 6, title: "Автовыполнение задания", description: "Одно ежедневное задание на выбор", type: "auto_complete", value: "daily", claimed: false },
-    { day: 7, title: "Сундук", description: "10.000–20.000 зубкоинов, бонус ×2 на 3 часа или автовыполнение", type: "chest", value: "large", claimed: false },
-  ];
-
-  const loadSavedTasks = (key, initialTasks) => {
-    try {
-      const saved = localStorage.getItem(key);
-      if (saved) {
-        return JSON.parse(saved);
-      }
-    } catch (e) {
-      console.error("Error loading tasks:", e);
-    }
-    return initialTasks;
-  };
-
-  const [dailyTasks, setDailyTasks] = useState(() => loadSavedTasks(DAILY_TASKS_KEY, initialDailyTasks));
-  const [weeklyTasks, setWeeklyTasks] = useState(() => loadSavedTasks(WEEKLY_TASKS_KEY, initialWeeklyTasks));
-  const [loginRewards, setLoginRewards] = useState(() => loadSavedTasks(LOGIN_REWARDS_KEY, loginRewardsConfig));
-  const [currentStreak, setCurrentStreak] = useState(() => {
-    const saved = localStorage.getItem(LOGIN_STREAK_KEY);
-    return saved ? parseInt(saved, 10) : 0;
-  });
-
-  // Проверка входа и обновление стрика
-  useEffect(() => {
-    const checkLoginStreak = () => {
-      const today = new Date().toDateString();
-      const lastLogin = localStorage.getItem(LAST_LOGIN_DATE_KEY);
-
-      if (lastLogin !== today) {
-        const lastLoginDate = lastLogin ? new Date(lastLogin) : null;
-        const todayDate = new Date();
-
-        if (lastLoginDate) {
-          const diffTime = todayDate - new Date(lastLogin);
-          const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-
-          if (diffDays === 1) {
-            // Следующий день подряд
-            const newStreak = currentStreak < 7 ? currentStreak + 1 : 1;
-            setCurrentStreak(newStreak);
-            localStorage.setItem(LOGIN_STREAK_KEY, newStreak.toString());
-            
-            if (newStreak === 1 && currentStreak === 7) {
-              setLoginRewards(loginRewardsConfig);
-              localStorage.setItem(LOGIN_REWARDS_KEY, JSON.stringify(loginRewardsConfig));
-            }
-          } else if (diffDays > 1) {
-            // Пропуск - сброс
-            setCurrentStreak(1);
-            localStorage.setItem(LOGIN_STREAK_KEY, "1");
-            setLoginRewards(loginRewardsConfig);
-            localStorage.setItem(LOGIN_REWARDS_KEY, JSON.stringify(loginRewardsConfig));
-          }
-        } else {
-          // Первый вход
-          setCurrentStreak(1);
-          localStorage.setItem(LOGIN_STREAK_KEY, "1");
-        }
-
-        localStorage.setItem(LAST_LOGIN_DATE_KEY, today);
-      }
-    };
-
-    checkLoginStreak();
-  }, []);
-
-  // Сохранение заданий в localStorage
-  useEffect(() => {
-    localStorage.setItem(DAILY_TASKS_KEY, JSON.stringify(dailyTasks));
-  }, [dailyTasks]);
-
-  useEffect(() => {
-    localStorage.setItem(WEEKLY_TASKS_KEY, JSON.stringify(weeklyTasks));
-  }, [weeklyTasks]);
-
-  useEffect(() => {
-    localStorage.setItem(LOGIN_REWARDS_KEY, JSON.stringify(loginRewards));
-  }, [loginRewards]);
-
-  // Проверка выполнения заданий
-  useEffect(() => {
-    setDailyTasks(prev => prev.map(task => {
-      if (task.claimed) return task;
-      
-      if (task.id === 1) {
-        return { ...task, completed: totalTaps >= 100 };
-      }
-      if (task.id === 2) {
-        return { ...task, completed: maxCoinsReached >= 5000 };
-      }
-      if (task.id === 3) {
-        return { ...task, completed: upgradesPurchased >= 1 };
-      }
-      if (totalTaps >= 10000 && !unlockedCharacters.has(2)) {
-        setUnlockedCharacters(prev => new Set([...prev, 2]));
-      }
-      return task;
-    }));
-  }, [totalTaps, maxCoinsReached, upgradesPurchased]);
-
-  // Обработчики для заданий
-  const handleClaimTaskReward = (task) => {
-    if (task.completed && !task.claimed) {
-      addCoins(task.reward);
-      
-      if (task.type === "daily") {
-        setDailyTasks(prev => prev.map(t => 
-          t.id === task.id ? { ...t, claimed: true } : t
-        ));
-      } else {
-        setWeeklyTasks(prev => prev.map(t => 
-          t.id === task.id ? { ...t, claimed: true } : t
-        ));
-      }
-      return true;
-    }
-    return false;
-  };
-
-  const handleClaimLoginReward = (reward) => {
-    if (reward.day !== currentStreak || reward.claimed) return false;
-
-    let rewardMessage = "";
-    if (currentStreak === 7) {
-      setUnlockedBackgrounds(prev => new Set([...prev, 2]));
-    }
-    // Обработка разных типов наград
-    if (reward.type === "coins") {
-      addCoins(reward.value);
-      rewardMessage = `Получено ${reward.value} зубкоинов`;
-    } else if (reward.type === "bonus") {
-      const bonus = activateTapBonus(reward.value.multiplier, reward.value.duration);
-      rewardMessage = `Активирован бонус ×${reward.value.multiplier} к тапам на ${reward.value.duration} минут`;
-    } else if (reward.type === "chest") {
-      // Рандомная награда из сундука
-      if (reward.value === "small") {
-        const random = Math.random();
-        if (random < 0.7) {
-          const coinsAmount = Math.floor(Math.random() * 9000) + 1000;
-          addCoins(coinsAmount);
-          rewardMessage = `Из сундука выпало ${coinsAmount} зубкоинов`;
-        } else {
-          activateTapBonus(2, 60);
-          rewardMessage = "Из сундука выпал бонус ×2 к тапам на 1 час";
-        }
-      } else if (reward.value === "large") {
-        const random = Math.random();
-        if (random < 0.5) {
-          const coinsAmount = Math.floor(Math.random() * 10000) + 10000;
-          addCoins(coinsAmount);
-          rewardMessage = `Из сундука выпало ${coinsAmount} зубкоинов`;
-        } else if (random < 0.8) {
-          activateTapBonus(2, 180);
-          rewardMessage = "Из сундука выпал бонус ×2 к тапам на 3 часа";
-        } else {
-          rewardMessage = "Из сундука выпало автовыполнение еженедельного задания";
-        }
-      }
-    } else if (reward.type === "auto_complete") {
-      rewardMessage = "Доступно автовыполнение задания";
-    }
-
-    // Помечаем награду как полученную
-    setLoginRewards(prev => prev.map(r => 
-      r.day === reward.day ? { ...r, claimed: true } : r
-    ));
-    
-    return { success: true, message: rewardMessage };
-  };
-
-  // ========== КОНЕЦ СЕКЦИИ ЗАДАНИЙ ==========
-
-  // Конфигурация автокликера
-  const autoClickerConfig = [
-    { level: 1, coinsPerHour: 1000, cost: 10000, name: "Купить автокликер" },
-    { level: 2, coinsPerHour: 1500, cost: 96000, name: "Автокликер уровень 2" },
-    { level: 3, coinsPerHour: 2500, cost: 252000, name: "Автокликер уровень 3" },
-    { level: 4, coinsPerHour: 4000, cost: 660000, name: "Автокликер уровень 4" },
-    { level: 5, coinsPerHour: 6000, cost: 1536000, name: "Автокликер уровень 5" },
-  ];
-
-  // Максимальное время офлайн-заработка (5 часов в миллисекундах)
-  const MAX_OFFLINE_HOURS = 5;
-  const MAX_OFFLINE_MS = MAX_OFFLINE_HOURS * 60 * 60 * 1000;
-
-  // Сохранение купленных апгрейдов
-  useEffect(() => {
-    localStorage.setItem(PURCHASED_UPGRADES_KEY, JSON.stringify([...purchasedUpgrades]));
-  }, [purchasedUpgrades]);
-
-  useEffect(() => {
-    localStorage.setItem(PURCHASED_AUTOCLICKERS_KEY, JSON.stringify([...purchasedAutoClickerLevels]));
-  }, [purchasedAutoClickerLevels]);
-
-  // Установка coinsPerHour на основе уровня автокликера (суммирование всех купленных уровней)
-  useEffect(() => {
-    if (purchasedAutoClickerLevels.size > 0) {
-      let totalCoinsPerHour = 0;
-      
-      purchasedAutoClickerLevels.forEach(level => {
-        const config = autoClickerConfig.find(c => c.level === level);
-        if (config) {
-          totalCoinsPerHour += config.coinsPerHour;
-        }
-      });
-      
-      if (purchasedUpgrades.has(7)) {
-        totalCoinsPerHour *= 1.5;
-      }
-      
-      setCoinsPerHour(totalCoinsPerHour);
-    } else {
-      setCoinsPerHour(0);
-    }
-  }, [purchasedAutoClickerLevels, purchasedUpgrades]);
-
-  // Сохранение уровня автокликера
-  useEffect(() => {
-    localStorage.setItem(AUTOCLICKER_LEVEL_KEY, autoClickerLevel.toString());
-  }, [autoClickerLevel]);
-
-  // Расчет офлайн заработка при запуске
-  useEffect(() => {
-    const calculateOfflineEarnings = () => {
-      const lastOnline = localStorage.getItem(LAST_ONLINE_KEY);
-      
-      if (lastOnline && purchasedAutoClickerLevels.size > 0 && coinsPerHour > 0) {
-        const lastOnlineTime = parseInt(lastOnline, 10);
-        const now = Date.now();
-        let offlineTime = now - lastOnlineTime;
-        
-        // Ограничиваем максимум 5 часами
-        offlineTime = Math.min(offlineTime, MAX_OFFLINE_MS);
-        
-        const offlineHours = offlineTime / (1000 * 60 * 60);
-        const earned = Math.floor(coinsPerHour * offlineHours);
-        
-        if (earned > 0) {
-          setOfflineEarnings(earned);
-        }
-      }
-    };
-
-    calculateOfflineEarnings();
-  }, [purchasedAutoClickerLevels, coinsPerHour]);
-
-  // Обновление времени последнего онлайна
-  useEffect(() => {
-    const updateLastOnline = () => {
-      localStorage.setItem(LAST_ONLINE_KEY, Date.now().toString());
-    };
-
-    updateLastOnline();
-    const interval = setInterval(updateLastOnline, 60000);
-
-    window.addEventListener('beforeunload', updateLastOnline);
-    document.addEventListener('visibilitychange', () => {
-      if (document.visibilityState === 'hidden') {
-        updateLastOnline();
-      }
-    });
-
-    return () => {
-      clearInterval(interval);
-      window.removeEventListener('beforeunload', updateLastOnline);
-    };
-  }, []);
-
-  // Отслеживание максимального количества монет
-  useEffect(() => {
-    if (coins > maxCoinsReached) {
-      setMaxCoinsReached(coins);
-    }
-  }, [coins, maxCoinsReached]);
-
-  // Пассивный доход от автокликера (каждую секунду)
-  useEffect(() => {
-    if (coinsPerHour <= 0) return;
-
-    const interval = setInterval(() => {
-      setCoins(prev => prev + coinsPerHour / 3600);
-    }, 1000);
-    return () => clearInterval(interval);
-  }, [coinsPerHour]);
-
-  // Восстановление энергии (каждую секунду на coinsPerClick, но максимум 5)
   useEffect(() => {
     const interval = setInterval(() => {
       setEnergy(prev => {
@@ -531,292 +133,571 @@ export const GameProvider = ({ children }) => {
         }
         return prev;
       });
-    }, 1000); // Каждую секунду
+    }, 1000);
     return () => clearInterval(interval);
   }, [maxEnergy, coinsPerClick]);
 
-  // Обновление визуальных элементов
+  // ========== ВИЗУАЛЬНЫЕ ЭЛЕМЕНТЫ ==========
+  
+  // Обновляем визуальные элементы в зависимости от уровня
+  // TODO: Когда сервер будет отправлять данные о разблокировках (unlockedBackgrounds, unlockedTeeth, unlockedCharacters),
+  // добавить логику для выбора правильных изображений
+  
   const updateVisuals = (currentLevel) => {
-    let toothLevel = 1;
-    if (unlockedTeeth.has(3)) toothLevel = 3;
-    else if (unlockedTeeth.has(2)) toothLevel = 2;
-    
-    let bgLevel = 1;
-    if (unlockedBackgrounds.has(3)) bgLevel = 3;
-    else if (unlockedBackgrounds.has(2) && unlockedTeeth.has(2)) bgLevel = 2;
-    
-    let charLevel = 1;
-    if (unlockedCharacters.has(3)) charLevel = 3;
-    else if (unlockedCharacters.has(2)) charLevel = 2;
-    
-    setToothImage(toothLevel === 1 ? Tooth1 : toothLevel === 2 ? Tooth2 : Tooth3);
-    setBackground(bgLevel === 1 ? Background1 : bgLevel === 2 ? Background2 : Background3);
-    setCharacter(charLevel === 1 ? Char1 : charLevel === 2 ? Char2 : Char3);
+    // Сейчас используем дефолтные значения
+    // В будущем здесь будет логика выбора разблокированных элементов
   };
+
   useEffect(() => {
     updateVisuals(level);
-  }, [level, unlockedTeeth, unlockedBackgrounds, unlockedCharacters]);
+  }, [level]);
 
-  // Повышение уровня
-  const upgradeLevel = (overflowExp = 0) => {
-    const newLevel = level + 1;
-    const newExpRequired = Math.floor(expRequired * 1.5);
-    
-    setLevel(newLevel);
-    setExpRequired(newExpRequired);
-    updateVisuals(newLevel);
-    
-    if (overflowExp >= newExpRequired) {
-      setExpCurrent(0);
-      upgradeLevel(overflowExp - newExpRequired);
-    } else {
-      setExpCurrent(overflowExp);
+  // Автоматически пересчитываем baseCoinsPerClick когда меняются апгрейды или юзер-апгрейды
+  useEffect(() => {
+    if (Array.isArray(upgrades) && Array.isArray(userUpgrades) && upgrades.length > 0 && userUpgrades.length > 0) {
+      const totalCoins = calculateTotalCoinsPerClick(upgrades, userUpgrades);
+      console.log('[GameContext] Auto-calculating baseCoinsPerClick from upgrades/userUpgrades:', totalCoins);
+      setBaseCoinsPerClick(totalCoins);
     }
+  }, [upgrades, userUpgrades]);
+
+  // ========== ОБРАБОТКА КЛИКОВ ==========
+  
+  // Вычисление требуемого опыта для уровня (формула: 100 * 1.5^(level-1))
+  const calculateExpRequired = (level) => {
+    return Math.floor(100 * Math.pow(1.5, level - 1));
   };
 
-  // Обработка клика
+  // Вычисление опыта для текущего уровня (остаток после всех левелапов)
+  const calculateExpForCurrentLevel = (totalExp, level) => {
+    let expUsed = 0;
+    for (let i = 1; i < level; i++) {
+      expUsed += calculateExpRequired(i);
+    }
+    return totalExp - expUsed;
+  };
+
+  // Основной обработчик клика
   const handleClick = () => {
     // Проверяем, хватает ли энергии для клика
-    if (energy >= coinsPerClick) {
-      setCoins(prev => prev + coinsPerClick);
-      setEnergy(prev => prev - coinsPerClick); // Тратим энергию = coinsPerClick
-      setTotalTaps(prev => prev + 1);
+    if (energy >= baseCoinsPerClick) {
+      // Сразу локально обновляем UI для отзывчивости (оптимистичное обновление)
+      setCoins(prev => prev + baseCoinsPerClick);
+      setEnergy(prev => prev - baseCoinsPerClick);
       
-      const newExp = expCurrent + coinsPerClick;
+      // Добавляем опыт локально
+      let newExp = expCurrent + baseCoinsPerClick;
       
-      if (newExp >= expRequired) {
-        const overflowExp = newExp - expRequired;
-        upgradeLevel(overflowExp);
-      } else {
-        setExpCurrent(newExp);
+      // Если опыт превышает требуемый, считаем скольео левелапов произойдет
+      // (левел-ап на сервере, но локально покажем прогресс)
+      while (newExp >= expRequired) {
+        newExp = newExp - expRequired;
       }
-    }
-  };
-
-  const addCoins = (amount) => {
-    setCoins(prev => prev + amount);
-  };
-
-  // Забрать офлайн заработок
-  const claimOfflineEarnings = () => {
-    if (offlineEarnings > 0) {
-      setCoins(prev => prev + offlineEarnings);
-      setOfflineEarnings(0);
-      return true;
-    }
-    return false;
-  };
-
-  // Проверка, можно ли купить апгрейд (последовательная покупка)
-  const canPurchaseUpgrade = (upgradeId) => {
-    if (purchasedUpgrades.has(upgradeId)) {
-      return false;
-    }
-    if (upgradeId === 7) {
-      return purchasedAutoClickerLevels.has(5);
-    }
-    if (upgradeId === 5) {
-      return purchasedUpgrades.has(4) && unlockedCharacters.has(2);
-    }
-    if (upgradeId === 1) {
-      return true;
-    }
-    return purchasedUpgrades.has(upgradeId - 1);
-  };
-
-  // Проверка, можно ли купить автокликер (последовательная покупка)
-  const canPurchaseAutoClicker = (level) => {
-    if (level === 4) {
-      return !purchasedAutoClickerLevels.has(level) && purchasedAutoClickerLevels.has(3) && unlockedCharacters.has(3);
-    }
-    if (level === 1) {
-      return !purchasedAutoClickerLevels.has(level);
-    }
-    return !purchasedAutoClickerLevels.has(level) && purchasedAutoClickerLevels.has(level - 1);
-  };
-
-  // Покупка апгрейда кликера (только один раз, последовательно)
-  const purchaseUpgrade = (upgradeId, cost, clickIncrease = 0, hourIncrease = 0) => {
-    if (coins >= cost && canPurchaseUpgrade(upgradeId)) {
-      setCoins(prev => prev - cost);
-      if (clickIncrease > 0) {
-        setBaseCoinsPerClick(prev => prev + clickIncrease);
+      
+      setExpCurrent(newExp);
+      
+      // Добавляем клик в батч для отправки на сервер
+      clickBatchRef.current.clicks += 1;
+      clickBatchRef.current.timestamps.push(Date.now());
+      
+      // Если уже есть таймаут, очищаем его
+      if (clickBatchTimeoutRef.current) {
+        clearTimeout(clickBatchTimeoutRef.current);
       }
-      if (hourIncrease > 0) {
-        setCoinsPerHour(prev => prev + hourIncrease);
-      }
-      setPurchasedUpgrades(prev => new Set([...prev, upgradeId]));
-      setUpgradesPurchased(prev => prev + 1);
-      if (upgradeId === 2 && !unlockedTeeth.has(2)) {
-        setUnlockedTeeth(prev => new Set([...prev, 2]));
-      }
-      if (upgradeId === 5 && !unlockedTeeth.has(3)) {
-        setUnlockedTeeth(prev => new Set([...prev, 3]));
-}
-      return true;
+      
+      // Устанавливаем таймаут на отправку батча через 150ms
+      clickBatchTimeoutRef.current = setTimeout(() => {
+        if (clickBatchRef.current.clicks > 0) {
+          const batchSize = clickBatchRef.current.clicks;
+          console.log(`[GameContext] Sending batch of ${batchSize} clicks with baseCoinsPerClick: ${baseCoinsPerClick}`);
+          
+          // Отправляем батч кликов на сервер через WebSocket
+          API.sendWebSocketMessage('game:click', {
+            clicks: clickBatchRef.current.clicks,
+            timestamps: clickBatchRef.current.timestamps,
+            coinsPerClick: baseCoinsPerClick // Отправляем текущий бонус за клик
+          });
+          
+          // Очищаем батч
+          clickBatchRef.current = { clicks: 0, timestamps: [] };
+          
+          // Сервер сам отправит обновление состояния через WebSocket
+          // (не запрашиваем явно, это экономит запросы к БД)
+        }
+      }, 150);
     }
-    return false;
   };
 
-  // Покупка/апгрейд автокликера (только один раз каждого уровня, последовательно)
-  const purchaseAutoClicker = (level, cost) => {
-    if (coins >= cost && canPurchaseAutoClicker(level)) {
-      setCoins(prev => prev - cost);
-      setAutoClickerLevel(level);
-      setPurchasedAutoClickerLevels(prev => new Set([...prev, level]));
-      setUpgradesPurchased(prev => prev + 1);
-      return true;
-    }
-    return false;
-  };
-  const purchaseCharacter3 = (cost) => {
-    if (coins >= cost && unlockedCharacters.has(2) && !purchasedCharacter3) {
-      setCoins(prev => prev - cost);
-      setUnlockedCharacters(prev => new Set([...prev, 3]));
-      setPurchasedCharacter3(true);
-      return true;
-    }
-    return false;
-  };
-
-  const getUpgradeLockReason = (upgradeId) => {
-    if (upgradeId === 7 && !purchasedAutoClickerLevels.has(5)) {
-      return "Купите автокликер уровень 5";
-    }
-    if (upgradeId === 5 && !unlockedCharacters.has(2)) {
-      return "Разблокируйте персонажа 2";
-    }
-    if (!canPurchaseUpgrade(upgradeId) && !purchasedUpgrades.has(upgradeId)) {
-      return "Купите пред. апгрейд";
-    }
-    return null;
-  };
-
-  const getAutoClickerLockReason = (level) => {
-    if (level === 4 && !unlockedCharacters.has(3)) {
-      return "Разблокируйте персонажа 3";
-    }
-    if (!canPurchaseAutoClicker(level) && !purchasedAutoClickerLevels.has(level)) {
-      return "Купите пред. уровень";
-    }
-    return null;
-  };
-
-    // ========== ПРОВЕРКИ ДЛЯ УВЕДОМЛЕНИЙ В ФУТЕРЕ ==========
+  // ========== ИНТЕГРАЦИЯ С СЕРВЕРОМ ==========
   
-  // Проверка наличия доступных наград в заданиях
-  const hasAvailableTasks = () => {
-    // Проверяем ежедневные задания
-    const hasCompletedDaily = dailyTasks.some(task => task.completed && !task.claimed);
-    
-    // Проверяем еженедельные задания
-    const hasCompletedWeekly = weeklyTasks.some(task => task.completed && !task.claimed);
-    
-    // Проверяем награды за вход
-    const hasLoginReward = loginRewards.some(reward => 
-      reward.day === currentStreak && !reward.claimed
-    );
-
-    return hasCompletedDaily || hasCompletedWeekly || hasLoginReward;
+  // Загрузка всех доступных улучшений
+  const loadUpgrades = async () => {
+    try {
+      setLoadingUpgrades(true);
+      console.log('[GameContext] Loading upgrades from API...');
+      const data = await API.getUpgrades();
+      console.log('[GameContext] Upgrades loaded:', data);
+      // Обработка ответа сервера - может быть в формате {data: [...]} или [...]
+      let upgradesList = [];
+      if (Array.isArray(data)) {
+        upgradesList = data;
+      } else if (data && Array.isArray(data.data)) {
+        upgradesList = data.data;
+      } else if (data && data.upgrades && Array.isArray(data.upgrades)) {
+        upgradesList = data.upgrades;
+      }
+      console.log('[GameContext] Processed upgrades list:', upgradesList);
+      setUpgrades(upgradesList);
+    } catch (error) {
+      console.error('[GameContext] Failed to load upgrades:', error);
+      setUpgrades([]);
+    } finally {
+      setLoadingUpgrades(false);
+    }
   };
 
+  // Загрузка всех доступных сервисов
+  const loadServices = async () => {
+    try {
+      setLoadingServices(true);
+      console.log('[GameContext] Loading services from API...');
+      const data = await API.getServices();
+      console.log('[GameContext] Services loaded:', data);
+      // Обработка ответа сервера - может быть в формате {data: [...]} или [...]
+      let servicesList = [];
+      if (Array.isArray(data)) {
+        servicesList = data;
+      } else if (data && Array.isArray(data.data)) {
+        servicesList = data.data;
+      } else if (data && data.services && Array.isArray(data.services)) {
+        servicesList = data.services;
+      }
+      console.log('[GameContext] Processed services list:', servicesList);
+      setServices(servicesList);
+    } catch (error) {
+      console.error('[GameContext] Failed to load services:', error);
+      setServices([]);
+    } finally {
+      setLoadingServices(false);
+    }
+  };
+
+  // Загрузка покупленных услуг - теперь запрашиваем свежее gameState
+  const loadUserServices = async () => {
+    try {
+      console.log('[GameContext] Reloading user services via gameState...');
+      // Просто запрашиваем свежее состояние которое включает user_services
+      const gameStateData = await API.getGameState();
+      if (gameStateData && gameStateData.user_services) {
+        console.log('[GameContext] User services loaded from gameState:', gameStateData.user_services);
+        setUserServices(gameStateData.user_services);
+        return gameStateData.user_services;
+      } else {
+        console.log('[GameContext] No user_services in gameState');
+        setUserServices([]);
+        return [];
+      }
+    } catch (error) {
+      console.error('[GameContext] Failed to load user services:', error);
+      setUserServices([]);
+      return [];
+    }
+  };
+
+  // Загрузка улучшений пользователя
+  const loadUserUpgrades = async () => {
+    try {
+      console.log('[GameContext] Loading user upgrades from API...');
+      const data = await API.getUserUpgrades();
+      console.log('[GameContext] User upgrades loaded:', data);
+      // Обработка ответа сервера - может быть в формате {data: [...]} или [...]
+      let userUpgradesList = [];
+      if (Array.isArray(data)) {
+        userUpgradesList = data;
+      } else if (data && Array.isArray(data.data)) {
+        userUpgradesList = data.data;
+      } else if (data && data.upgrades && Array.isArray(data.upgrades)) {
+        userUpgradesList = data.upgrades;
+      }
+      console.log('[GameContext] Processed user upgrades list:', userUpgradesList);
+      setUserUpgrades(userUpgradesList);
+      return userUpgradesList; // Возвращаем загруженный список
+    } catch (error) {
+      console.error('[GameContext] Failed to load user upgrades:', error);
+      setUserUpgrades([]);
+      return []; // Возвращаем пустой массив при ошибке
+    }
+  };
+
+  // Загрузка ежедневных задач
+  const loadDailyTasks = async () => {
+    try {
+      setLoadingTasks(true);
+      console.log('[GameContext] Loading daily tasks from API...');
+      const data = await API.getDailyTasks();
+      console.log('[GameContext] Daily tasks loaded:', data);
+      // Обработка ответа сервера
+      let tasksList = [];
+      if (Array.isArray(data)) {
+        tasksList = data;
+      } else if (data && Array.isArray(data.data)) {
+        tasksList = data.data;
+      } else if (data && data.tasks && Array.isArray(data.tasks)) {
+        tasksList = data.tasks;
+      }
+      console.log('[GameContext] Processed daily tasks list:', tasksList);
+      setDailyTasks(tasksList);
+    } catch (error) {
+      console.error('[GameContext] Failed to load daily tasks:', error);
+      setDailyTasks([]);
+    } finally {
+      setLoadingTasks(false);
+    }
+  };
+
+  // Загрузка еженедельных задач
+  const loadWeeklyTasks = async () => {
+    try {
+      console.log('[GameContext] Loading weekly tasks from API...');
+      const data = await API.getWeeklyTasks();
+      console.log('[GameContext] Weekly tasks loaded:', data);
+      // Обработка ответа сервера
+      let tasksList = [];
+      if (Array.isArray(data)) {
+        tasksList = data;
+      } else if (data && Array.isArray(data.data)) {
+        tasksList = data.data;
+      } else if (data && data.tasks && Array.isArray(data.tasks)) {
+        tasksList = data.tasks;
+      }
+      console.log('[GameContext] Processed weekly tasks list:', tasksList);
+      setWeeklyTasks(tasksList);
+    } catch (error) {
+      console.error('[GameContext] Failed to load weekly tasks:', error);
+      setWeeklyTasks([]);
+    }
+  };
+
+  // Загрузка награды за вход
+  const loadLoginRewards = async () => {
+    try {
+      console.log('[GameContext] Loading login rewards from API...');
+      const data = await API.getLoginRewards?.();
+      if (data) {
+        console.log('[GameContext] Login rewards loaded:', data);
+        // Обработка ответа сервера
+        let rewardsList = [];
+        if (Array.isArray(data)) {
+          rewardsList = data;
+        } else if (data && Array.isArray(data.data)) {
+          rewardsList = data.data;
+        } else if (data && data.rewards && Array.isArray(data.rewards)) {
+          rewardsList = data.rewards;
+        }
+        console.log('[GameContext] Processed login rewards list:', rewardsList);
+        setLoginRewards(rewardsList);
+      }
+    } catch (error) {
+      console.error('[GameContext] Failed to load login rewards:', error);
+      // Не критично если награды не загружены
+    }
+  };
+
+  // Функция для вычисления суммарного бонуса монет при клике от всех купленных апгрейдов
+  const calculateTotalCoinsPerClick = (allUpgrades, allUserUpgrades) => {
+    if (!Array.isArray(allUpgrades) || !Array.isArray(allUserUpgrades)) {
+      return 1; // базовый бонус
+    }
+    
+    let totalBonus = 1; // базовый бонус = 1
+    
+    allUserUpgrades.forEach(userUpgrade => {
+      // Находим соответствующий апгрейд по upgrade_id
+      const upgradeData = allUpgrades.find(u => u.id === userUpgrade.upgrade_id);
+      if (upgradeData && upgradeData.base_value) {
+        const bonus = parseFloat(upgradeData.base_value) || 0;
+        totalBonus += bonus;
+      }
+    });
+    
+    return totalBonus;
+  };
+
+  // Загрузка состояния игры с сервера
+  const loadGameState = (serverData) => {
+    console.log('[GameContext] loadGameState called with:', serverData);
+    
+    if (serverData.user) {
+      // Структура ответа с сервера: { user: {...}, ... }
+      const user = serverData.user;
+      if (user.coins !== undefined) setCoins(Number(user.coins));
+      if (user.energy !== undefined) setEnergy(Number(user.energy));
+      if (user.max_energy !== undefined) setMaxEnergy(Number(user.max_energy));
+      if (user.level !== undefined) {
+        setLevel(Number(user.level));
+        setExpRequired(calculateExpRequired(Number(user.level)));
+      }
+      if (user.experience !== undefined && user.level !== undefined) {
+        const expForCurrentLevel = calculateExpForCurrentLevel(Number(user.experience), Number(user.level));
+        setExpCurrent(Math.max(0, expForCurrentLevel));
+      }
+      if (user.coins_per_click !== undefined) setCoinsPerClick(Number(user.coins_per_click));
+      if (user.base_coins_per_click !== undefined) setBaseCoinsPerClick(Number(user.base_coins_per_click));
+    } else {
+      // Структура может быть плоская
+      if (serverData.coins !== undefined) setCoins(Number(serverData.coins));
+      if (serverData.energy !== undefined) setEnergy(Number(serverData.energy));
+      if (serverData.max_energy !== undefined) setMaxEnergy(Number(serverData.max_energy));
+      if (serverData.level !== undefined) {
+        setLevel(Number(serverData.level));
+        setExpRequired(calculateExpRequired(Number(serverData.level)));
+      }
+      if (serverData.experience !== undefined && serverData.level !== undefined) {
+        const expForCurrentLevel = calculateExpForCurrentLevel(Number(serverData.experience), Number(serverData.level));
+        setExpCurrent(Math.max(0, expForCurrentLevel));
+      }
+      if (serverData.coins_per_click !== undefined) setCoinsPerClick(Number(serverData.coins_per_click));
+      if (serverData.base_coins_per_click !== undefined) setBaseCoinsPerClick(Number(serverData.base_coins_per_click));
+    }
+    
+    // Загружаем покупленные услуги если они есть в ответе сервера
+    if (serverData.user_services && Array.isArray(serverData.user_services)) {
+      console.log('[GameContext] Setting user services from gameState:', serverData.user_services);
+      setUserServices(serverData.user_services);
+    }
+    
+    if (serverData.activeBoosts) setActiveBonus(serverData.activeBoosts[0] || null);
+  };
+
+  // Инициализация WebSocket соединения и слушателей
+  useEffect(() => {
+    const initSocket = async () => {
+      // Небольшая задержка чтобы убедиться что токен загружен
+      setTimeout(() => {
+        console.log('[GameContext] Initializing WebSocket connection...');
+        
+        API.initializeWebSocket(
+          (message) => {
+            console.log('[GameContext] Received WebSocket message:', message);
+            
+            // Обрабатываем разные типы сообщений от сервера
+            if (message.type === 'game:state') {
+              console.log('[GameContext] Loading game state from server');
+              loadGameState(message.data);
+            } else if (message.type === 'energy:update') {
+              console.log('[GameContext] Updating energy:', message.data);
+              if (message.data.energy !== undefined) {
+                setEnergy(message.data.energy);
+              }
+            } else if (message.type === 'game:click:result') {
+              console.log('[GameContext] Click result received');
+            }
+          },
+          (error) => {
+            console.error('[GameContext] WebSocket error:', error);
+          }
+        );
+        
+        // Загружаем улучшения и сервисы после установления соединения
+        loadUpgrades();
+        loadServices();
+        loadUserUpgrades();
+        loadDailyTasks();
+        loadWeeklyTasks();
+        loadLoginRewards();
+      }, 1000);
+    };
+
+    initSocket();
+
+    // Cleanup при размонтировании
+    return () => {
+      // Отправляем оставшиеся клики перед отключением
+      if (clickBatchRef.current.clicks > 0) {
+        console.log(`[GameContext] Sending final batch of ${clickBatchRef.current.clicks} clicks on unmount with baseCoinsPerClick: ${baseCoinsPerClick}`);
+        API.sendWebSocketMessage('game:click', {
+          clicks: clickBatchRef.current.clicks,
+          timestamps: clickBatchRef.current.timestamps,
+          coinsPerClick: baseCoinsPerClick // Отправляем текущий бонус за клик
+        });
+      }
+      
+      // Очищаем таймаут
+      if (clickBatchTimeoutRef.current) {
+        clearTimeout(clickBatchTimeoutRef.current);
+      }
+      
+      API.closeWebSocket();
+    };
+  }, []);
+
+  // ========== ПРОВЕРКИ ДЛЯ УВЕДОМЛЕНИЙ В ФУТЕРЕ ==========
+  
   // Проверка наличия доступных апгрейдов
   const hasAvailableUpgrades = () => {
-    // Список всех апгрейдов кликера
-    const upgrades = [
-      { id: 1, cost: 72000 },
-      { id: 2, cost: 144000 },
-      { id: 3, cost: 288000 },
-      { id: 4, cost: 432000 },
-      { id: 5, cost: 864000 },
-      { id: 6, cost: 1568000 },
-      { id: 7, cost: 2216000 }, // Специальный апгрейд (Ассистент)
-    ];
-
-    // Проверяем, есть ли доступные для покупки апгрейды кликера
-    const hasAffordableUpgrade = upgrades.some(upgrade => 
-      coins >= upgrade.cost && canPurchaseUpgrade(upgrade.id)
-    );
-
-    // Проверяем, есть ли доступные для покупки автокликеры
-    const hasAffordableAutoClicker = autoClickerConfig.some(config =>
-      coins >= config.cost && canPurchaseAutoClicker(config.level)
-    );
-
-    return hasAffordableUpgrade || hasAffordableAutoClicker;
+    return upgrades && upgrades.length > 0;
   };
 
   // Проверка наличия доступных услуг
   const hasAvailableServices = () => {
-    const services = [
-      { cost: 50000 },
-      { cost: 250000 },
-      { cost: 750000 },
-      { cost: 500000 },
-      { cost: 50000 },
-      { cost: 5000000 },
-      { cost: 5000000 },
-      { cost: 50000 },
-      { cost: 900000 },
-      { cost: 900000 },
-      { cost: 1600000 },
-    ];
-
-    // Проверяем, есть ли хотя бы одна доступная услуга
-    return services.some(service => coins >= service.cost);
+    return services && services.length > 0;
   };
 
+  // Проверка наличия доступных заданий
+  const hasAvailableTasks = () => {
+    // TODO: Когда сервер будет отправлять информацию о заданиях
+    // Сейчас возвращаем false до интеграции
+    return false;
+  };
+
+  // ========== ЗАГЛУШКИ ДЛЯ УДАЛЁННЫХ СВОЙСТВ ==========
+  // Эти свойства удалены из GameContext в процессе очистки,
+  // но компоненты их ещё используют. Добавляем заглушки.
+  
+  const addCoins = (amount) => {
+    console.log('[GameContext] addCoins called with amount:', amount, 'type:', typeof amount);
+    if (isNaN(amount)) {
+      console.error('[GameContext] ERROR: amount is NaN!');
+      return;
+    }
+    setCoins(prev => {
+      // Убеждаемся что prev это число
+      const prevNum = Number(prev);
+      if (isNaN(prevNum)) {
+        console.error('[GameContext] ERROR: prev is NaN! prev =', prev, 'type =', typeof prev);
+        return prevNum;
+      }
+      const newCoins = Math.max(0, prevNum + amount);
+      console.log('[GameContext] Coins updated: prev =', prevNum, 'amount =', amount, 'new =', newCoins);
+      return newCoins;
+    });
+  };
+
+  const invitedFriendsCount = 0;
+  const unlockedBackgrounds = new Set([1]);
+  const unlockedTeeth = new Set([1]);
+  const unlockedCharacters = new Set([1]);
+  const purchasedCharacter3 = false;
+  
+  const purchaseUpgrade = async (upgradeId) => {
+    try {
+      console.log('[GameContext] Purchasing upgrade:', upgradeId);
+      const result = await API.purchaseUpgrade(upgradeId);
+      console.log('[GameContext] Upgrade purchased:', result);
+      
+      // Перезагружаем список покупок пользователя и получаем обновленный список
+      const updatedUserUpgrades = await loadUserUpgrades();
+      
+      // Считаем суммарный бонус на основе обновленного списка и текущего списка апгрейдов
+      const totalCoins = calculateTotalCoinsPerClick(upgrades, updatedUserUpgrades);
+      console.log('[GameContext] Setting baseCoinsPerClick to:', totalCoins);
+      setBaseCoinsPerClick(totalCoins);
+      
+      return result;
+    } catch (error) {
+      console.error('[GameContext] Failed to purchase upgrade:', error);
+      return false;
+    }
+  };
+
+  const purchaseAutoClicker = () => false;
+  
+  const purchaseCharacter3 = () => false;
+  
+  const canPurchaseUpgrade = (upgradeId) => {
+    // Проверяем, куплено ли уже это улучшение
+    if (!upgradeId || !userUpgrades) return false;
+    return !userUpgrades.some(u => u.id === upgradeId);
+  };
+
+  const canPurchaseAutoClicker = () => false;
+  
+  const getUpgradeLockReason = () => null;
+  
+  const getAutoClickerLockReason = () => null;
+  
+  const autoClickerConfig = [];
+  // Безопасное создание Set из userUpgrades (проверяем что это массив)
+  const purchasedUpgrades = new Set(
+    Array.isArray(userUpgrades) ? userUpgrades.map(u => u.id) : []
+  );
+  const purchasedAutoClickerLevels = new Set();
+
+  // ========== ЭКСПОРТ КОНТЕКСТА ==========
+  
   const value = {
+    // Основные параметры игры
     coins,
     level,
     energy,
     maxEnergy,
     coinsPerClick,
     baseCoinsPerClick,
-    coinsPerHour,
     expCurrent,
     expRequired,
-    userProfile,
-    totalTaps,
-    maxCoinsReached,
-    upgradesPurchased,
+    
+    // Визуальные элементы
     toothImage,
     background,
     character,
-    autoClickerLevel,
-    autoClickerConfig,
-    offlineEarnings,
-    purchasedUpgrades,
-    purchasedAutoClickerLevels,
-    canPurchaseUpgrade,
-    canPurchaseAutoClicker,
-    handleClick,
-    addCoins,
-    purchaseUpgrade,
-    purchaseAutoClicker,
-    claimOfflineEarnings,
-    upgradeLevel,
+    userProfile,
     setUserProfile,
+    
+    // Система бонусов
+    activeBonus,
+    activateTapBonus,
+    
+    // Механики игры
+    handleClick,
+    
+    // Улучшения и сервисы
+    upgrades,
+    services,
+    userUpgrades,
+    userServices,
+    loadingUpgrades,
+    loadingServices,
+    loadUpgrades,
+    loadServices,
+    loadUserUpgrades,
+    loadUserServices,
+    
+    // Задачи
     dailyTasks,
     weeklyTasks,
     loginRewards,
-    currentStreak,
-    handleClaimTaskReward,
-    handleClaimLoginReward,
-    activeBonus,
-    activateTapBonus,
-    hasAvailableTasks,
+    loadingTasks,
+    loadDailyTasks,
+    loadWeeklyTasks,
+    loadLoginRewards,
+    
+    // Проверки для UI
     hasAvailableUpgrades,
     hasAvailableServices,
+    hasAvailableTasks,
+    
+    // Заглушки для удалённых свойств (TODO: интегрировать с сервером)
+    addCoins,
     invitedFriendsCount,
     unlockedBackgrounds,
     unlockedTeeth,
     unlockedCharacters,
     purchasedCharacter3,
-    inviteFriend,
+    purchaseUpgrade,
+    purchaseAutoClicker,
     purchaseCharacter3,
+    canPurchaseUpgrade,
+    canPurchaseAutoClicker,
     getUpgradeLockReason,
     getAutoClickerLockReason,
+    autoClickerConfig,
+    purchasedUpgrades,
+    purchasedAutoClickerLevels,
+    
+    // Утилиты
+    calculateExpRequired,
+    calculateExpForCurrentLevel,
+    loadGameState,
   };
 
   return (
