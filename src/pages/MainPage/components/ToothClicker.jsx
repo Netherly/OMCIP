@@ -57,7 +57,6 @@ const ToothClicker = () => {
 
     const rect = e.currentTarget.getBoundingClientRect();
     
-    // Обрабатываем все касания
     Array.from(e.changedTouches).forEach(touch => {
       const x = touch.clientX - rect.left;
       const y = touch.clientY - rect.top;
@@ -74,7 +73,6 @@ const ToothClicker = () => {
 
   // Обработка клика мышью (для десктопа)
   const onMouseClick = useCallback((e) => {
-    // Игнорируем если это было touch событие
     if (e.pointerType === 'touch') return;
     
     if (energy <= 0 || !canTap()) return;

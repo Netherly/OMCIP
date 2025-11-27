@@ -35,18 +35,18 @@ const TaskCard = ({ task, onClaim }) => {
 
       <div className="task-card__right">
         <div className="task-card__status">
-          <div className={`task-card__status-icon ${task.completed ? "task-card__status-icon--completed" : ""}`}>
+          <div className={`task-card__status-icon ${task.completed ? "task-card__status-icon--completed" : ""} ${canClaim ? "task-card__status-icon--can-claim" : ""}`}>
             {task.claimed ? "✓" : task.completed ? "✓" : "✕"}
           </div>
-          <span className={`task-card__status-text ${task.completed ? "task-card__status-text--completed" : ""}`}>
-            {task.claimed ? "Получено" : task.completed ? "Выполнено" : "Не выполнено"}
+          <span className={`task-card__status-text ${task.completed ? "task-card__status-text--completed" : ""} ${canClaim ? "task-card__status-text--can-claim" : ""}`}>
+            {task.claimed ? "Получено" : canClaim ? "Можно получить" : task.completed ? "Выполнено" : "Не выполнено"}
           </span>
         </div>
 
         <span className="task-card__title">{task.title}</span>
 
         <button 
-          className={`task-card__reward ${!canClaim ? "task-card__reward--disabled" : ""}`}
+          className={`task-card__reward ${!canClaim ? "task-card__reward--disabled" : ""} ${canClaim ? "task-card__reward--active" : ""}`}
           onClick={onClaim}
           disabled={!canClaim}
         >

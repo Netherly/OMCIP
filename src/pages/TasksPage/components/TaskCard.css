@@ -90,7 +90,15 @@
 .task-card__status-icon--completed {
     background: rgba(34, 197, 94, 0.2);
     color: #22c55e;
+    border-color: #22c55e;
 }
+.task-card__status-icon--can-claim {
+    background: linear-gradient(180deg, rgba(70.62, 242.71, 255, 1), rgba(0, 180.41, 208.17, 1) 83%);
+    color: #fff;
+    border: none;
+    animation: pulse 2s ease-in-out infinite;
+}
+
 .task-card__status-text {
     color: rgba(255, 255, 255, 0.5);
     font-family: Inter;
@@ -103,8 +111,12 @@
 .task-card__status-text--completed {
     color: rgba(34, 197, 94, 0.9);
 }
+.task-card__status-text--can-claim {
+    color: rgba(70.62, 242.71, 255, 1);
+    font-weight: 600;
+}
+
 .task-card__title {
-    color: rgba(255, 255, 255, 0.9);
     color: rgba(255, 255, 255, 0.9);
     font-family: Inter;
     font-size: 16px;
@@ -116,7 +128,6 @@
 .task-card__reward {
     width: 146px;
     height: 41px;
-    /* Автолейаут */
     display: flex;
     flex-direction: row;
     justify-content: center;
@@ -128,19 +139,47 @@
     border-radius: 25px;
     box-shadow: inset 0px -5px 15px 0px rgba(0, 0, 0, 0.25),0px 7px 8.899999618530273px 0px rgba(0, 0, 0, 0.25);
     background: rgba(44, 44, 44, 0.8);
-    
+    cursor: pointer;
+    transition: all 0.2s ease;
 }
-.task-card__reward:active:not(.task-card__reward--disabled) {
+.task-card__reward--active {
+    border: none;
+    border-radius: 25px;
+    box-shadow: inset 0px -5px 15px 0px rgba(0, 0, 0, 0.25), 0px 7px 8.899999618530273px 0px rgba(0, 0, 0, 0.25), inset 0px 4px 5.800000190734863px 0px rgba(255, 255, 255, 0.45);
+    background: linear-gradient(180deg, rgba(70.62, 242.71, 255, 1), rgba(0, 180.41, 208.17, 1) 83%);
+    cursor: pointer;
+    animation: glow 2s ease-in-out infinite;
+}
+
+.task-card__reward--active .task-card__reward-text {
+    color: rgba(255, 255, 255, 1);
+    font-family: Inter;
+    font-size: 16px;
+    font-weight: 600;
+    line-height: 150%;
+    letter-spacing: -1.1%;
+    text-align: center;
+}
+
+.task-card__reward--active:active {
+    transform: scale(0.95);
+    box-shadow: inset 0px -5px 15px 0px rgba(0, 0, 0, 0.35), 0px 3px 5px 0px rgba(0, 0, 0, 0.25), inset 0px 4px 5.800000190734863px 0px rgba(255, 255, 255, 0.45);
+}
+
+.task-card__reward:active:not(.task-card__reward--disabled):not(.task-card__reward--active) {
     border-radius: 25px;
     box-shadow: inset 0px -5px 15px 0px rgba(0, 0, 0, 0.25),0px 7px 8.899999618530273px 0px rgba(0, 0, 0, 0.25),inset 0px 4px 5.800000190734863px 0px rgba(255, 255, 255, 0.45);
     background: linear-gradient(180.00deg, rgba(70.6153564453125, 242.7076873779297, 255, 1),rgba(0, 180.4124755859375, 208.1682586669922, 1) 83%);
 }
+
 .task-card__reward--disabled {
     box-sizing: border-box;
     border: 1px solid rgba(59, 216, 231, 0.5);
     border-radius: 25px;
     box-shadow: inset 0px -5px 15px 0px rgba(0, 0, 0, 0.25),0px 7px 8.899999618530273px 0px rgba(0, 0, 0, 0.25);
     background: rgba(44, 44, 44, 0.8);
+    cursor: not-allowed;
+    opacity: 0.6;
 }
 .task-card__reward-icon {
     width: 18px;

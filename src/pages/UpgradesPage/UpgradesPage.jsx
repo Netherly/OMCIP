@@ -12,6 +12,7 @@ import naborImg from "../../assets/images/upgrades/nabor.svg";
 import lotokImg from "../../assets/images/upgrades/lotok.svg";
 import assistantImg from "../../assets/images/upgrades/assistant.svg";
 import checkImg from "../../assets/images/upgrades/check.svg";
+import Char3 from "../../assets/images/char3.svg";
 
 const UpgradesPage = () => {
   const [activeTab, setActiveTab] = useState("clicker");
@@ -24,7 +25,12 @@ const UpgradesPage = () => {
     purchasedAutoClickerLevels,
     canPurchaseUpgrade,
     canPurchaseAutoClicker,
-    background 
+    background,
+    getUpgradeLockReason,
+    getAutoClickerLockReason,
+    purchaseCharacter3,
+    unlockedCharacters,
+    purchasedCharacter3,
   } = useGame();
 
   const upgrades = [
@@ -37,7 +43,7 @@ const UpgradesPage = () => {
   ];
 
   const specialUpgrade = {
-    id: 5,
+    id: 7,
     name: "Ассистент",
     image: assistantImg,
     perTap: 25,
@@ -45,6 +51,12 @@ const UpgradesPage = () => {
     clickIncrease: 25,
     bonus: "Увеличивает автокликер в 1,5 раза",
     bonusIcon: checkImg,
+  };
+  const character3Config = {
+    id: 3,
+    name: "Персонаж 3",
+    cost: 1000000,
+    image: Char3,
   };
 
   const handlePurchase = (upgrade) => {
@@ -55,9 +67,11 @@ const UpgradesPage = () => {
     purchaseAutoClicker(config.level, config.cost);
   };
 
-  // Разделяем автокликеры на обычные (первые 4) и специальный (5-й)
   const regularAutoClickers = autoClickerConfig.slice(0, 4);
   const specialAutoClicker = autoClickerConfig[4];
+  const handleCharacter3Purchase = () => {
+    purchaseCharacter3(1000000);
+  };
 
   return (
     <div
@@ -67,7 +81,6 @@ const UpgradesPage = () => {
       <main className="upgrades-page__content">
         <h1 className="upgrades-page__title">Апгрейды</h1>
         
-        {/* Переключатель вкладок */}
         <div className="upgrades-page__tabs">
           <button
             className={`upgrades-page__tab ${activeTab === "clicker" ? "upgrades-page__tab--active" : ""}`}
@@ -80,6 +93,12 @@ const UpgradesPage = () => {
             onClick={() => setActiveTab("autoclicker")}
           >
             Автокликер
+          </button>
+          <button
+            className={`upgrades-page__tab ${activeTab === "appearance" ? "upgrades-page__tab--active" : ""}`}
+            onClick={() => setActiveTab("appearance")}
+          >
+            Вид
           </button>
         </div>
 
@@ -99,6 +118,7 @@ const UpgradesPage = () => {
                     canAfford={canAfford && canPurchase}
                     onPurchase={() => handlePurchase(upgrade)}
                     isLocked={!canPurchase && !isPurchased}
+                    lockReason={getUpgradeLockReason(upgrade.id)}
                   />
                 );
               })}
@@ -123,7 +143,7 @@ const UpgradesPage = () => {
               })()}
             </div>
           </>
-        ) : (
+        ) : activeTab === "autoclicker" ? (
           <>
             <div className="upgrades-page__grid">
               {regularAutoClickers.map((config) => {
@@ -139,6 +159,7 @@ const UpgradesPage = () => {
                     canAfford={canAfford && canPurchase}
                     onPurchase={() => handleAutoClickerPurchase(config)}
                     isLocked={!canPurchase && !isPurchased}
+                    lockReason={getAutoClickerLockReason(config.level)}
                   />
                 );
               })}
@@ -163,6 +184,24 @@ const UpgradesPage = () => {
               })()}
             </div>
           </>
+        ) : (
+          <div className="upgrades-page__special">
+            <UpgradeCard
+              upgrade={{
+                id: character3Config.id,
+                name: character3Config.name,
+                image: character3Config.image,
+                perTap: 0,
+                cost: character3Config.cost,
+              }}
+              isPurchased={purchasedCharacter3}
+              canAfford={coins >= character3Config.cost && unlockedCharacters.has(2) && !purchasedCharacter3}
+              onPurchase={handleCharacter3Purchase}
+              isSpecial={true}
+              isLocked={!unlockedCharacters.has(2)}
+              lockReason={!unlockedCharacters.has(2) ? "Разблокируйте персонажа 2" : null}
+            />
+          </div>
         )}
       </main>
 

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import "./LoadingPage.css";
-import toothAnimation from "../../assets/images/broke_tooth.svg";
+import toothAnimation from "../../assets/images/tooth.webm";
 import { 
   preloadCriticalImages, 
   preloadImportantImages,
@@ -15,16 +15,32 @@ const LoadingPage = ({ onLoaded }) => {
 
     const loadResources = async () => {
       try {
+        // 0. Получаем разблокированные уровни из localStorage
+        const unlockedBackgrounds = new Set(
+          JSON.parse(localStorage.getItem("dental_clicker_unlocked_backgrounds") || "[1]")
+        );
+        const unlockedTeeth = new Set(
+          JSON.parse(localStorage.getItem("dental_clicker_unlocked_teeth") || "[1]")
+        );
+        const unlockedCharacters = new Set(
+          JSON.parse(localStorage.getItem("dental_clicker_unlocked_characters") || "[1]")
+        );
+
         // 1. Быстро показываем начальный прогресс
         setProgress(10);
 
-        // 2. Загружаем ТОЛЬКО критичные изображения
-        await preloadCriticalImages((loadProgress) => {
-          if (isMounted) {
-            // От 10% до 90%
-            setProgress(10 + loadProgress * 80);
-          }
-        });
+        // 2. Загружаем ТОЛЬКО критичные изображения с учетом разблокированных уровней
+        await preloadCriticalImages(
+          (loadProgress) => {
+            if (isMounted) {
+              // От 10% до 90%
+              setProgress(10 + loadProgress * 80);
+            }
+          },
+          unlockedBackgrounds,
+          unlockedTeeth,
+          unlockedCharacters
+        );
 
         // 3. Финальная анимация до 100%
         if (isMounted) {
@@ -37,7 +53,11 @@ const LoadingPage = ({ onLoaded }) => {
               
               // 5. ПОСЛЕ запуска приложения загружаем остальное в фоне
               setTimeout(() => {
-                preloadImportantImages().then(() => {
+                preloadImportantImages(
+                  unlockedBackgrounds,
+                  unlockedTeeth,
+                  unlockedCharacters
+                ).then(() => {
                   // Когда важные загрузились, загружаем дополнительные
                   preloadAdditionalImages();
                 });
@@ -64,9 +84,12 @@ const LoadingPage = ({ onLoaded }) => {
   return (
     <div className="loading-container">
       <div className="loading-content">
-        <img 
+        <video 
           src={toothAnimation} 
-          alt="tooth loading" 
+          autoPlay 
+          loop 
+          muted 
+          playsInline
           className="tooth-animation"
         />
 

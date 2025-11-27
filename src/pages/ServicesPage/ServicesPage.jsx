@@ -18,7 +18,7 @@ import Certificate3000 from "../../assets/images/services/certificate-3000.svg";
 import Certificate5000 from "../../assets/images/services/certificate-5000.svg";
 
 const ServicesPage = () => {
-    const { coins, addCoins, background } = useGame();
+    const { coins, addCoins, background, invitedFriendsCount, unlockedBackgrounds } = useGame();
 
     const services = [
         {
@@ -44,6 +44,7 @@ const ServicesPage = () => {
             title: "Бесплатная чистка зубов",
             image: Cleaning,
             cost: 500000,
+            requiresBackground: 2,
         },
         {
             id: 5,
@@ -113,6 +114,10 @@ const ServicesPage = () => {
                             service={service}
                             canAfford={coins >= service.cost}
                             onPurchase={() => handlePurchase(service)}
+                            invitedFriendsCount={invitedFriendsCount}
+                            isLocked={service.id === 3 && invitedFriendsCount < 30}
+                            requiresBackground={service.requiresBackground}
+                            unlockedBackgrounds={unlockedBackgrounds}
                         />
                     ))}
                 </div>

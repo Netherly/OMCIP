@@ -1,5 +1,6 @@
 import React from "react";
 import { useNavigate, useLocation } from "react-router-dom";
+import { useGame } from "../../context/GameContext";
 import "./Footer.css";
 
 import serviceImg from "../../assets/images/service.svg";
@@ -11,13 +12,48 @@ import characterImg from "../../assets/images/character.svg";
 const Footer = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const {
+    hasAvailableTasks,
+    hasAvailableUpgrades,
+    hasAvailableServices
+  } = useGame();
 
   const menuItems = [
-    { id: "services", label: "Услуги", icon: serviceImg, path: "/services" },
-    { id: "upgrades", label: "Апгрейды", icon: upgradeImg, path: "/upgrades" },
-    { id: "home", label: "", icon: mainImg, path: "/" },
-    { id: "tasks", label: "Задания", icon: taskImg, path: "/tasks" },
-    { id: "character", label: "Персонаж", icon: characterImg, path: "/character" },
+    { 
+      id: "services", 
+      label: "Услуги", 
+      icon: serviceImg, 
+      path: "/services",
+      hasNotification: hasAvailableServices()
+    },
+    { 
+      id: "upgrades", 
+      label: "Апгрейды", 
+      icon: upgradeImg, 
+      path: "/upgrades",
+      hasNotification: hasAvailableUpgrades()
+    },
+    { 
+      id: "home", 
+      label: "", 
+      icon: mainImg, 
+      path: "/",
+      hasNotification: false
+    },
+    { 
+      id: "tasks", 
+      label: "Задания", 
+      icon: taskImg, 
+      path: "/tasks",
+      hasNotification: hasAvailableTasks()
+    },
+    { 
+      id: "character", 
+      label: "Персонаж", 
+      icon: characterImg, 
+      path: "/character",
+      hasNotification: false
+    },
   ];
 
   return (
@@ -32,6 +68,9 @@ const Footer = () => {
               className={`footer-item ${isActive ? "footer-item-active" : ""}`}
               onClick={() => navigate(item.path)}
             >
+              {item.hasNotification && !isActive && (
+                <div className="footer-notification-dot"></div>
+              )}
               <img
                 src={item.icon}
                 alt={item.label}

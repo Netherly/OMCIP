@@ -21,10 +21,10 @@
 }
 
 .tooth-animation {
-    width: clamp(250px, 70vw, 331px);
+    width: clamp(400px, 80vw, 600px);
     height: auto;
-    aspect-ratio: 331 / 235;
-    margin-bottom: clamp(60px, 15vh, 100px);
+    object-fit: contain;
+    margin-bottom: clamp(60px, 12vh, 100px);
 }
 
 .circular-loader {
@@ -34,6 +34,7 @@
     transform: translateX(-50%);
     width: clamp(90px, 25vw, 116px);
     height: clamp(90px, 25vw, 116px);
+    margin-bottom: 20px;
 }
 
 .progress-ring {
@@ -64,11 +65,9 @@
     font-weight: 600;
     color: white;
 }
-
-/* Адаптив для очень маленьких экранов (iPhone SE, старые Android) */
 @media (max-width: 360px) {
     .tooth-animation {
-        width: 240px;
+        width: 320px;
         margin-bottom: 50px;
     }
     
@@ -82,11 +81,9 @@
         font-size: 15px;
     }
 }
-
-/* Адаптив для низких экранов */
 @media (max-height: 600px) {
     .tooth-animation {
-        width: 220px;
+        width: 300px;
         margin-bottom: 40px;
     }
     
@@ -94,5 +91,10 @@
         bottom: 24px;
         width: 80px;
         height: 80px;
+    }
+}
+@media (min-width: 768px) {
+    .tooth-animation {
+        width: clamp(500px, 60vw, 700px);
     }
 }

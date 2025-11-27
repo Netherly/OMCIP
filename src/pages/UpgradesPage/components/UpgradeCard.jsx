@@ -3,10 +3,9 @@ import "./UpgradeCard.css";
 import { formatNumber } from "../../../utils/formatters";
 import ToothCoinImg from "../../../assets/images/upgrades/tooth.svg";
 
-const UpgradeCard = ({ upgrade, isPurchased, canAfford, onPurchase, isSpecial = false, isLocked = false }) => {
+const UpgradeCard = ({ upgrade, isPurchased, canAfford, onPurchase, isSpecial = false, isLocked = false, lockReason = null }) => {
   return (
     <div className={`upgrade-card ${isSpecial ? "upgrade-card--special" : ""} ${isLocked ? "upgrade-card--locked" : ""}`}>
-      {/* Верхний ярус */}
       <div className="upgrade-card__top">
         <div className="upgrade-card__image-wrapper">
           <img 
@@ -60,7 +59,9 @@ const UpgradeCard = ({ upgrade, isPurchased, canAfford, onPurchase, isSpecial = 
         {isPurchased ? (
           <span className="upgrade-card__button-text">Куплено</span>
         ) : isLocked ? (
-          <span className="upgrade-card__button-text">🔒 Заблокировано</span>
+          <span className="upgrade-card__button-text">
+            {lockReason || "Купите предыдущий апгрейд"}
+          </span>
         ) : (
           <>
             <img 

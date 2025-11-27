@@ -1,109 +1,37 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import "./TasksPage.css";
 import Header from "../../components/Header/Header";
 import Footer from "../../components/Footer/Footer";
 import TaskCard from "./components/TaskCard";
+import LoginRewardCard from "./components/LoginRewardCard";
 import { useGame } from "../../context/GameContext";
 
-// Ключи для localStorage
-const DAILY_TASKS_KEY = "dental_clicker_daily_tasks";
-const WEEKLY_TASKS_KEY = "dental_clicker_weekly_tasks";
-const LAST_RESET_KEY = "dental_clicker_last_reset";
-
 const TasksPage = () => {
-  const [activeTab, setActiveTab] = useState("daily"); 
+  const [activeTab, setActiveTab] = useState("daily");
+  const [notification, setNotification] = useState(null); 
   const { 
-    coins, 
-    addCoins, 
-    background, 
-    totalTaps, 
-    maxCoinsReached, 
-    upgradesPurchased 
+    background,
+    dailyTasks,
+    weeklyTasks,
+    loginRewards,
+    currentStreak,
+    handleClaimTaskReward,
+    handleClaimLoginReward,
   } = useGame();
 
-  // Начальные задания
-  const initialDailyTasks = [
-    { id: 1, title: "Сделай 100 тапов", reward: 1000, completed: false, claimed: false, type: "daily" },
-    { id: 2, title: "Накопи 5000 зубкоинов", reward: 2000, completed: false, claimed: false, type: "daily" },
-    { id: 3, title: "Купи любой апгрейд", reward: 1500, completed: false, claimed: false, type: "daily" },
-  ];
+  const currentTasks = activeTab === "daily" 
+    ? dailyTasks 
+    : activeTab === "weekly" 
+      ? weeklyTasks 
+      : loginRewards;
 
-  const initialWeeklyTasks = [
-    { id: 4, title: "Сыграй 7 дней без пропусков", reward: 70000, completed: false, claimed: false, type: "weekly", progress: 0, maxProgress: 7 },
-    { id: 5, title: "Собери 100000 зубкоинов за неделю", reward: 50000, completed: false, claimed: false, type: "weekly", progress: 0, maxProgress: 7 },
-  ];
-
-  // Загрузка сохраненных данных из localStorage
-  const loadSavedTasks = (key, initialTasks) => {
-    try {
-      const saved = localStorage.getItem(key);
-      if (saved) {
-        return JSON.parse(saved);
-      }
-    } catch (e) {
-      console.error("Error loading tasks:", e);
-    }
-    return initialTasks;
-  };
-
-  const [dailyTasks, setDailyTasks] = useState(() => loadSavedTasks(DAILY_TASKS_KEY, initialDailyTasks));
-  const [weeklyTasks, setWeeklyTasks] = useState(() => loadSavedTasks(WEEKLY_TASKS_KEY, initialWeeklyTasks));
-
-  // Сохранение в localStorage при изменении
-  useEffect(() => {
-    try {
-      localStorage.setItem(DAILY_TASKS_KEY, JSON.stringify(dailyTasks));
-    } catch (e) {
-      console.error("Error saving daily tasks:", e);
-    }
-  }, [dailyTasks]);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem(WEEKLY_TASKS_KEY, JSON.stringify(weeklyTasks));
-    } catch (e) {
-      console.error("Error saving weekly tasks:", e);
-    }
-  }, [weeklyTasks]);
-
-  // Проверка выполнения заданий
-  useEffect(() => {
-    setDailyTasks(prev => prev.map(task => {
-      // Не меняем если уже claimed
-      if (task.claimed) return task;
-      
-      if (task.id === 1) {
-        return { ...task, completed: totalTaps >= 100 };
-      }
-      if (task.id === 2) {
-        return { ...task, completed: maxCoinsReached >= 5000 };
-      }
-      if (task.id === 3) {
-        return { ...task, completed: upgradesPurchased >= 1 };
-      }
-      return task;
-    }));
-  }, [totalTaps, maxCoinsReached, upgradesPurchased]);
-
-  const handleClaimReward = (task) => {
-    if (task.completed && !task.claimed) {
-      addCoins(task.reward);
-      
-      if (task.type === "daily") {
-        setDailyTasks(prev => prev.map(t => 
-          t.id === task.id ? { ...t, claimed: true } : t
-        ));
-      } else {
-        setWeeklyTasks(prev => prev.map(t => 
-          t.id === task.id ? { ...t, claimed: true } : t
-        ));
-      }
-      
-      console.log(`Получена награда: ${task.reward} зубкоинов`);
+  const handleLoginRewardClaim = (reward) => {
+    const result = handleClaimLoginReward(reward);
+    if (result && result.success) {
+      setNotification(result.message);
+      setTimeout(() => setNotification(null), 5000);
     }
   };
-
-  const currentTasks = activeTab === "daily" ? dailyTasks : weeklyTasks;
 
   return (
     <div 
@@ -111,6 +39,12 @@ const TasksPage = () => {
       style={{ backgroundImage: `url(${background})` }}
     >
       <Header />
+      
+      {notification && (
+        <div className="tasks-page__notification">
+          {notification}
+        </div>
+      )}
       
       <main className="tasks-page__content">
         <div className="tasks-page__tabs">
@@ -126,16 +60,34 @@ const TasksPage = () => {
           >
             Еженедельные
           </button>
+          <button
+            className={`tasks-page__tab ${activeTab === "login" ? "tasks-page__tab--active" : ""}`}
+            onClick={() => setActiveTab("login")}
+          >
+            Вход
+          </button>
         </div>
 
         <div className="tasks-page__list">
-          {currentTasks.map((task) => (
-            <TaskCard
-              key={task.id}
-              task={task}
-              onClaim={() => handleClaimReward(task)}
-            />
-          ))}
+          {activeTab === "login" ? (
+            loginRewards.map((reward) => (
+              <LoginRewardCard
+                key={reward.day}
+                reward={reward}
+                canClaim={reward.day === currentStreak && !reward.claimed}
+                isClaimed={reward.claimed}
+                onClaim={() => handleLoginRewardClaim(reward)}
+              />
+            ))
+          ) : (
+            currentTasks.map((task) => (
+              <TaskCard
+                key={task.id}
+                task={task}
+                onClaim={() => handleClaimTaskReward(task)}
+              />
+            ))
+          )}
         </div>
       </main>
 

@@ -6,6 +6,7 @@
   border-radius: 22px;
   background: rgba(44, 44, 44, 0.8);
   overflow: hidden;
+  z-index: 1;
 }
 
 .progress-bar__fill {
@@ -16,7 +17,7 @@
   border-radius: 14px;
   background: linear-gradient(270deg, rgba(31, 206, 227, 1) 0%, rgba(17, 113, 125, 1) 100%);
   transition: width 0.3s ease;
-  z-index: 1;
+  
 }
 
 .progress-bar__content {

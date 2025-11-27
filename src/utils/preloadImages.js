@@ -1,37 +1,80 @@
-import Background1 from "../assets/images/background_lvl1.svg";
-import Background2 from "../assets/images/background_lvl2.svg";
-import Background3 from "../assets/images/background_lvl3.svg";
+import Background1 from "../assets/images/background_lvl1.png";
+import Background2 from "../assets/images/background_lvl2.png";
+import Background3 from "../assets/images/background_lvl3.png";
 import Tooth1 from "../assets/images/tooth1.svg";
 import Tooth2 from "../assets/images/tooth2.svg";
 import Tooth3 from "../assets/images/tooth3.svg";
-import Char1 from "../assets/images/char1.svg";
-import Char2 from "../assets/images/char2.svg";
-import Char3 from "../assets/images/char3.svg";
+import Char1 from "../assets/images/char1.webm";
+import Char2 from "../assets/images/char2.webm";
+import Char3 from "../assets/images/char3.webm";
 import ToothCoin from "../assets/images/tooth_coin.svg";
 import ProfilePlaceholder from "../assets/images/profile-placeholder.png";
 
 /**
- * КРИТИЧНЫЕ изображения - загружаются сразу (главный экран)
+ * Получение критичных изображений на основе разблокированных уровней
  */
-export const criticalImages = [
-  Background1,  // Фон первого уровня
-  Tooth1,       // Зуб первого уровня
-  Char1,        // Персонаж первого уровня
-  ToothCoin,    // Монетка (показывается сразу)
-];
+export const getCriticalImages = (unlockedBackgrounds, unlockedTeeth, unlockedCharacters) => {
+  const images = [ToothCoin];
+  
+  // Определяем текущий фон
+  if (unlockedBackgrounds?.has(3)) {
+    images.push(Background3);
+  } else if (unlockedBackgrounds?.has(2)) {
+    images.push(Background2);
+  } else {
+    images.push(Background1);
+  }
+  
+  // Определяем текущий зуб
+  if (unlockedTeeth?.has(3)) {
+    images.push(Tooth3);
+  } else if (unlockedTeeth?.has(2)) {
+    images.push(Tooth2);
+  } else {
+    images.push(Tooth1);
+  }
+  
+  // Определяем текущего персонажа
+  if (unlockedCharacters?.has(3)) {
+    images.push(Char3);
+  } else if (unlockedCharacters?.has(2)) {
+    images.push(Char2);
+  } else {
+    images.push(Char1);
+  }
+  
+  return images;
+};
 
 /**
- * ВАЖНЫЕ изображения - загружаются после критичных (второй приоритет)
+ * Получение важных изображений (все остальные разблокированные)
  */
-export const importantImages = [
-  Background2,
-  Background3,
-  Tooth2,
-  Tooth3,
-  Char2,
-  Char3,
-  ProfilePlaceholder,
-];
+export const getImportantImages = (unlockedBackgrounds, unlockedTeeth, unlockedCharacters) => {
+  const images = [ProfilePlaceholder];
+  
+  // Добавляем все разблокированные фоны (кроме текущего, он уже в critical)
+  unlockedBackgrounds?.forEach(level => {
+    if (level === 1 && !unlockedBackgrounds.has(2) && !unlockedBackgrounds.has(3)) return;
+    if (level === 2 && !unlockedBackgrounds.has(3)) images.push(Background2);
+    if (level === 1) images.push(Background1);
+  });
+  
+  // Добавляем все разблокированные зубы
+  unlockedTeeth?.forEach(level => {
+    if (level === 1 && !unlockedTeeth.has(2) && !unlockedTeeth.has(3)) return;
+    if (level === 2 && !unlockedTeeth.has(3)) images.push(Tooth2);
+    if (level === 1) images.push(Tooth1);
+  });
+  
+  // Добавляем всех разблокированных персонажей
+  unlockedCharacters?.forEach(level => {
+    if (level === 1 && !unlockedCharacters.has(2) && !unlockedCharacters.has(3)) return;
+    if (level === 2 && !unlockedCharacters.has(3)) images.push(Char2);
+    if (level === 1) images.push(Char1);
+  });
+  
+  return images;
+};
 
 /**
  * ДОПОЛНИТЕЛЬНЫЕ изображения - загружаются в фоне (низкий приоритет)
@@ -96,21 +139,17 @@ const loadImageBatch = (images, onProgress) => {
 /**
  * Прелоад только критичных изображений (для начального экрана)
  */
-export const preloadCriticalImages = (onProgress) => {
-  console.log(`⚡ Loading ${criticalImages.length} critical images...`);
-  return loadImageBatch(criticalImages, onProgress).then(() => {
-    console.log(`✅ Critical images loaded`);
-  });
+export const preloadCriticalImages = (onProgress, unlockedBackgrounds, unlockedTeeth, unlockedCharacters) => {
+  const images = getCriticalImages(unlockedBackgrounds, unlockedTeeth, unlockedCharacters);
+  return loadImageBatch(images, onProgress);
 };
 
 /**
  * Прелоад важных изображений (в фоне после загрузки критичных)
  */
-export const preloadImportantImages = () => {
-  console.log(`📦 Loading ${importantImages.length} important images in background...`);
-  return loadImageBatch(importantImages).then(() => {
-    console.log(`✅ Important images loaded`);
-  });
+export const preloadImportantImages = (unlockedBackgrounds, unlockedTeeth, unlockedCharacters) => {
+  const images = getImportantImages(unlockedBackgrounds, unlockedTeeth, unlockedCharacters);
+  return loadImageBatch(images);
 };
 
 /**
@@ -118,18 +157,5 @@ export const preloadImportantImages = () => {
  */
 export const preloadAdditionalImages = () => {
   if (additionalImages.length === 0) return Promise.resolve();
-  
-  console.log(`📦 Loading ${additionalImages.length} additional images...`);
-  return loadImageBatch(additionalImages).then(() => {
-    console.log(`✅ Additional images loaded`);
-  });
-};
-
-/**
- * УСТАРЕВШАЯ функция - оставлена для совместимости
- * Используйте preloadCriticalImages вместо неё
- */
-export const preloadImages = (onProgress) => {
-  console.warn('⚠️ preloadImages is deprecated. Use preloadCriticalImages instead.');
-  return preloadCriticalImages(onProgress);
+  return loadImageBatch(additionalImages);
 };

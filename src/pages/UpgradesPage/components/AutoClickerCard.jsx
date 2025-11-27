@@ -10,7 +10,8 @@ const AutoClickerCard = ({
   canAfford, 
   onPurchase,
   isSpecial = false,
-  isLocked = false
+  isLocked = false,
+  lockReason = null
 }) => {
   return (
     <div className={`upgrade-card ${isSpecial ? "upgrade-card--special" : ""} ${isLocked ? "upgrade-card--locked" : ""}`}>
@@ -52,7 +53,9 @@ const AutoClickerCard = ({
         {isPurchased ? (
           <span className="upgrade-card__button-text">Куплено</span>
         ) : isLocked ? (
-          <span className="upgrade-card__button-text">🔒 Заблокировано</span>
+          <span className="upgrade-card__button-text">
+            {lockReason || "Купите предыдущий уровень"}
+          </span>
         ) : (
           <>
             <img 

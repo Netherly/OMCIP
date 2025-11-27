@@ -24,6 +24,12 @@
     height: 100%;
     object-fit: cover;
 }
+.service-card__content-wrapper {
+  position: relative;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
 .service-card__placeholder {
     font-size: 40px;
 }
@@ -32,6 +38,9 @@
     display: flex;
     flex-direction: column;
     gap: 9px;
+}
+.service-card__content--blurred {
+  filter: blur(4px);
 }
 .service-card__description {
     color: rgba(255, 255, 255, 0.85);
@@ -46,7 +55,6 @@
 .service-card__button {
     width: 126px;
     height: 35px;
-    /* Автолейаут */
     display: flex;
     flex-direction: row;
     justify-content: center;
@@ -75,4 +83,34 @@
   font-size: 14px;
   font-weight: 700;
   line-height: 120%;
+}
+.service-card__lock-overlay {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 10;
+  width: 170px;
+  height: 18px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 4px 8px;
+  border-radius: 26px;
+  background: rgba(255, 255, 255, 1);
+  backdrop-filter: blur(0);
+  filter: none;
+}
+
+.service-card__lock-text {
+  font-family: Inter;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 120%;
+  letter-spacing: -1.1%;
+  color: rgba(0, 0, 0, 0.8);
+}
+
+.service-card__lock-count {
+  color: rgba(10, 191, 208, 1);
 }
