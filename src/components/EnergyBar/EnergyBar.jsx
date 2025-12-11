@@ -3,15 +3,25 @@ import "./EnergyBar.css";
 
 const EnergyBar = ({ current, max }) => {
   const percentage = Math.min((current / max) * 100, 100);
-  const isFull = percentage > 95;
+  const isFull = percentage >= 100;
+  const isCurrentFull = current >= max;
 
   return (
     <div className="energy-bar">
-      {/* Текст МАКС */}
-      <div className="energy-bar__max-label">
-        <span className="energy-bar__max-text">МАКС</span>
-        <span className="energy-bar__max-value">{max}</span>
-      </div>
+      {/* Текст МАКС - показываем только если энергия полная */}
+      {isCurrentFull && (
+        <div className="energy-bar__max-label">
+          <span className="energy-bar__max-text">МАКС</span>
+          <span className="energy-bar__max-value">{Math.floor(current)}</span>
+        </div>
+      )}
+      
+      {/* Текущее значение энергии - показываем если не полная */}
+      {!isCurrentFull && (
+        <div className="energy-bar__max-label">
+          <span className="energy-bar__current-value">{Math.floor(current)}</span>
+        </div>
+      )}
 
       {/* Контейнер энергии */}
       <div className="energy-bar__container">

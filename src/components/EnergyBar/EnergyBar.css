@@ -26,6 +26,12 @@
   color: #ffffff;
 }
 
+.energy-bar__current-value {
+  font-size: 12px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.8);
+}
+
 /* Контейнер энергии */
 .energy-bar__container {
   position: relative;
