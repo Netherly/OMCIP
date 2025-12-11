@@ -39,7 +39,7 @@ const PURCHASED_CHARACTER3_KEY = "dental_clicker_purchased_character3";
 
 export const GameProvider = ({ children }) => {
   // Основные игровые параметры
-  const [coins, setCoins] = useState(1111111110);
+  const [coins, setCoins] = useState(1);
   const [level, setLevel] = useState(1);
   const [energy, setEnergy] = useState(10000);
   const [maxEnergy] = useState(10000);
